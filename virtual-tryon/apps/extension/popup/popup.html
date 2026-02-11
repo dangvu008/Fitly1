@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitly - Virtual Try-On</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="popup">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 32 32" fill="none">
+                        <g transform="translate(16, 17) scale(0.6) translate(-16, -16)">
+                            <path d="M10 12 L10 26 L22 26 L22 12" fill="white" />
+                            <path d="M12 8 L16 11 L20 8 L22 12 L16 13.5 L10 12 L12 8 Z" fill="white" />
+                            <path d="M10 12 L6 14 L8 20 L10 18" fill="white" />
+                            <path d="M22 12 L26 14 L24 20 L22 18" fill="white" />
+                        </g>
+                    </svg>
+                </div>
+                <span class="logo-text">Fitly</span>
+            </div>
+            <div id="gems-badge" class="gems-badge hidden">
+                <span class="gem-icon">💎</span>
+                <span id="gems-count" class="gem-count">0</span>
+            </div>
+        </header>
+
+        <!-- Auth Section (hidden in demo mode) -->
+        <section id="auth-section" class="section auth-section hidden">
+            <div class="auth-content">
+                <svg class="auth-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M20 21a8 8 0 00-16 0" />
+                </svg>
+                <p>Đăng nhập để bắt đầu thử đồ</p>
+                <button id="login-btn" class="btn btn-primary btn-full">
+                    Đăng nhập
+                </button>
+            </div>
+        </section>
+
+        <!-- Main Section (shown when logged in) -->
+        <section id="main-section" class="section main-section hidden">
+            <!-- User Info -->
+            <div id="user-info" class="user-info">
+                <div class="user-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M20 21a8 8 0 00-16 0" />
+                    </svg>
+                </div>
+                <div class="user-details">
+                    <span id="user-name" class="user-name">User</span>
+                    <span id="user-email" class="user-email">email@example.com</span>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="actions">
+                <button id="open-sidebar" class="btn btn-primary btn-full">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <line x1="9" y1="3" x2="9" y2="21" />
+                    </svg>
+                    Mở Sidebar
+                </button>
+
+                <div class="actions-row">
+                    <button id="select-image" class="btn btn-secondary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                        Chọn ảnh
+                    </button>
+                    <button id="view-wardrobe" class="btn btn-secondary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z" />
+                        </svg>
+                        Tủ đồ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Demo Mode Banner -->
+            <div id="demo-mode-banner" class="demo-banner">
+                🧪 Demo Mode - Không cần đăng nhập
+            </div>
+
+            <!-- Tips -->
+            <div class="tips">
+                <p class="tip-title">💡 Mẹo nhanh</p>
+                <p class="tip-text">Chuột phải vào ảnh quần áo trên bất kỳ trang web nào và chọn "Thử đồ này với Fitly"
+                </p>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <a href="http://localhost:3000" target="_blank" id="open-web">Mở Web App</a>
+            <span class="divider">•</span>
+            <a href="#" id="logout-btn" class="hidden">Đăng xuất</a>
+        </footer>
+    </div>
+    <script src="../lib/icons.js"></script>
+    <script src="popup.js"></script>
+</body>
+
+</html>

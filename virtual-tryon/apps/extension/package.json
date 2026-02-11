@@ -1,0 +1,10 @@
+{
+    "name": "@fitly/extension",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Fitly Chrome Extension",
+    "scripts": {
+        "dev": "echo 'Load extension từ thư mục này trong Chrome'",
+        "build": "echo 'Production build'"
+    }
+}

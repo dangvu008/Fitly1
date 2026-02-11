@@ -1,0 +1,316 @@
+/**
+ * Fitly Design System
+ * ====================
+ * Shared design tokens for Web App & Browser Extension
+ * 
+ * This file contains all CSS custom properties (variables) that should be
+ * consistent across all Fitly interfaces.
+ * 
+ * Usage:
+ * - Web App: Import in globals.css
+ * - Extension: @import in sidebar.css and popup.css
+ */
+
+/* ===========================================
+   FONTS
+   =========================================== */
+
+/* Import Inter font - Primary typeface */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ===========================================
+   CSS VARIABLES - Design Tokens
+   =========================================== */
+
+:root {
+  /* =================== Typography =================== */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+
+  /* =================== Colors - Light Mode =================== */
+  /* Background */
+  --color-background: #fafafa;
+  --color-background-secondary: #f5f5f5;
+  --color-background-elevated: #ffffff;
+  
+  /* Foreground / Text */
+  --color-foreground: #0a0a0a;
+  --color-foreground-secondary: #6b7280;
+  --color-foreground-muted: #9ca3af;
+  
+  /* Card */
+  --color-card: #ffffff;
+  --color-card-elevated: #ffffff;
+  
+  /* Border */
+  --color-border: #e5e5e5;
+  --color-border-light: #f0f0f0;
+  --color-border-dark: #d4d4d4;
+  
+  /* Muted */
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #6b7280;
+
+  /* =================== Primary Colors - Brand Gradient =================== */
+  --color-primary: #f97316;
+  --color-primary-start: #f97316;
+  --color-primary-end: #ec4899;
+  --color-primary-hover: #ea580c;
+  
+  /* Gradient Definitions */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary-start), var(--color-primary-end));
+  --gradient-primary-soft: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(236, 72, 153, 0.15));
+  --gradient-primary-medium: linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(236, 72, 153, 0.25));
+
+  /* =================== Accent Colors =================== */
+  --color-accent: #0095f6;
+  --color-accent-hover: #1ea1f7;
+  
+  /* =================== Status Colors =================== */
+  --color-success: #22c55e;
+  --color-success-bg: rgba(34, 197, 94, 0.1);
+  --color-error: #ef4444;
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-info: #3b82f6;
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* =================== Spacing =================== */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* =================== Border Radius =================== */
+  --radius-none: 0;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* =================== Shadows =================== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.2);
+  --shadow-primary: 0 4px 16px rgba(249, 115, 22, 0.3);
+  --shadow-primary-lg: 0 8px 24px rgba(249, 115, 22, 0.4);
+
+  /* =================== Transitions =================== */
+  --transition-fast: 0.1s ease;
+  --transition-base: 0.15s ease-out;
+  --transition-slow: 0.3s ease-out;
+
+  /* =================== Z-Index =================== */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  --z-toast: 800;
+  --z-overlay: 1000;
+
+  /* =================== Layout =================== */
+  --sidebar-width: 380px;
+  --popup-width: 320px;
+  --header-height: 56px;
+  --nav-height: 60px;
+  
+  /* Safe Areas (for mobile) */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+/* ===========================================
+   DARK MODE
+   =========================================== */
+
+.dark,
+[data-theme="dark"],
+:root:has(.dark) {
+  /* Background */
+  --color-background: #0a0a0a;
+  --color-background-secondary: #111111;
+  --color-background-elevated: #1a1a1a;
+  
+  /* Foreground / Text */
+  --color-foreground: #ffffff;
+  --color-foreground-secondary: #a1a1a1;
+  --color-foreground-muted: #737373;
+  
+  /* Card */
+  --color-card: #1a1a1a;
+  --color-card-elevated: #1f1f1f;
+  
+  /* Border */
+  --color-border: #2a2a2a;
+  --color-border-light: #333333;
+  --color-border-dark: #3a3a3a;
+  
+  /* Muted */
+  --color-muted: #1f1f1f;
+  --color-muted-foreground: #a1a1a1;
+  
+  /* Input */
+  --color-input: #262626;
+
+  /* Shadows (darker for dark mode) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Auto dark mode based on system preference */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light):not([data-theme="light"]) {
+    /* Background */
+    --color-background: #0a0a0a;
+    --color-background-secondary: #111111;
+    --color-background-elevated: #1a1a1a;
+    
+    /* Foreground / Text */
+    --color-foreground: #ffffff;
+    --color-foreground-secondary: #a1a1a1;
+    --color-foreground-muted: #737373;
+    
+    /* Card */
+    --color-card: #1a1a1a;
+    --color-card-elevated: #1f1f1f;
+    
+    /* Border */
+    --color-border: #2a2a2a;
+    --color-border-light: #333333;
+    --color-border-dark: #3a3a3a;
+    
+    /* Muted */
+    --color-muted: #1f1f1f;
+    --color-muted-foreground: #a1a1a1;
+    
+    /* Input */
+    --color-input: #262626;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* ===========================================
+   COMMON UTILITIES
+   =========================================== */
+
+/* Gradient text utility */
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Tap target for touch */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-muted) 25%,
+    var(--color-border) 50%,
+    var(--color-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Scrollbar styling */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--color-foreground-muted);
+}
+
+/* Hidden utility */
+.hidden {
+  display: none !important;
+}
