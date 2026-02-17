@@ -180,51 +180,48 @@ async function loadUserModels() {
 }
 
 function renderUserModels() {
-    const grid = document.getElementById('user-models-grid');
-    const countEl = document.getElementById('models-count');
+    const list = document.getElementById('user-models-list');
+    
+    if (!list) return;
 
-    if (!grid) return;
-
-    // Update count
-    if (countEl) {
-        countEl.textContent = `${state.userModels.length}/10`;
-    }
-
-    if (state.userModels.length === 0) {
-        grid.innerHTML = `
-            <div class="user-models-empty" style="grid-column: 1/-1;">
-                Chưa có ảnh nào. Tải ảnh lên hoặc thử đồ để lưu tự động.
-            </div>
-        `;
-        return;
-    }
-
-    grid.innerHTML = state.userModels.map(model => {
+    // Generate HTML for existing models
+    const modelsHtml = state.userModels.map((model, index) => {
         const isSelected = state.selectedModelId === model.id;
-        const isDefault = state.defaultModelId === model.id;
+        // Default label if none provided
+        const label = model.label || `Mẫu ${index + 1}`;
 
         return `
-            <div class="user-model-item ${isSelected ? 'selected' : ''} ${isDefault ? 'is-default' : ''}" 
+            <div class="user-model-item ${isSelected ? 'selected' : ''}" 
                  data-id="${model.id}" 
                  data-url="${model.url}"
-                 title="${model.label}${isDefault ? ' (Mặc định)' : ''}">
-                <img src="${model.url}" alt="${model.label}" loading="lazy">
-                <div class="model-item-actions">
-                    ${!isDefault ? `
-                        <button class="model-action-btn default-btn" data-action="set-default" title="Đặt mặc định">★</button>
-                    ` : ''}
-                    <button class="model-action-btn delete-btn" data-action="delete" title="Xóa">×</button>
+                 title="${label}">
+                <div class="model-thumbnail">
+                    <img src="${model.url}" alt="${label}" loading="lazy">
+                    <button class="model-delete-btn" data-action="delete" title="Xóa">×</button>
                 </div>
+                <span class="model-label">${label}</span>
             </div>
         `;
     }).join('');
 
+    // Add "Add" button at the end
+    const addBtnHtml = `
+        <div class="user-model-item model-add-btn" id="add-model-btn" title="Thêm ảnh mới">
+            <div class="model-thumbnail">
+                <span class="model-add-icon">+</span>
+            </div>
+            <span class="model-label">Thêm</span>
+        </div>
+    `;
+
+    list.innerHTML = modelsHtml + addBtnHtml;
+
     // Add click handlers
-    grid.querySelectorAll('.user-model-item').forEach(item => {
+    list.querySelectorAll('.user-model-item:not(.model-add-btn)').forEach(item => {
         // Select model on click
         item.addEventListener('click', (e) => {
-            // Don't trigger if clicking action buttons
-            if (e.target.closest('.model-item-actions')) return;
+            // Don't trigger if clicking delete button
+            if (e.target.closest('.model-delete-btn')) return;
 
             const id = item.dataset.id;
             const url = item.dataset.url;
@@ -233,28 +230,31 @@ function renderUserModels() {
             state.selectedModelId = id;
 
             // Update selected state visually
-            grid.querySelectorAll('.user-model-item').forEach(i => i.classList.remove('selected'));
+            list.querySelectorAll('.user-model-item').forEach(i => i.classList.remove('selected'));
             item.classList.add('selected');
 
             updateUI();
             showToast(t('photo_selected'), 'success');
         });
 
-        // Handle action buttons
-        item.querySelectorAll('.model-action-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
+        // Handle delete button
+        const deleteBtn = item.querySelector('.model-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const action = btn.dataset.action;
                 const modelId = item.dataset.id;
-
-                if (action === 'delete') {
-                    await deleteUserModel(modelId);
-                } else if (action === 'set-default') {
-                    await setDefaultModel(modelId);
-                }
+                await deleteUserModel(modelId);
             });
-        });
+        }
     });
+
+    // Handle Add button
+    const addBtn = document.getElementById('add-model-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            elements.modelUploadInput?.click();
+        });
+    }
 }
 
 async function addUserModel(imageUrl, source = 'upload') {
@@ -712,10 +712,10 @@ function updateUI() {
         elements.modelImageContainer?.classList.remove('has-image');
     }
 
-    // Update selected state in user models grid
-    const userModelsGrid = document.getElementById('user-models-grid');
-    if (userModelsGrid) {
-        userModelsGrid.querySelectorAll('.user-model-item').forEach(item => {
+    // Update selected state in user models list
+    const userModelsList = document.getElementById('user-models-list');
+    if (userModelsList) {
+        userModelsList.querySelectorAll('.user-model-item').forEach(item => {
             const isSelected = item.dataset.id === state.selectedModelId;
             item.classList.toggle('selected', isSelected);
         });
