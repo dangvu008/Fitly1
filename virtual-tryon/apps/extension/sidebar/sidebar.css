@@ -3890,10 +3890,11 @@ h6 {
    ========================================== */
 .wardrobe-section {
   position: fixed;
-  top: 0;
+  top: 52px;
+  /* Sit below main header */
   left: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 52px);
   background: var(--bg-primary);
   z-index: 1000;
   display: flex;
@@ -3998,8 +3999,8 @@ h6 {
 /* Wardrobe Categories (Horizontal Scroll) */
 .wardrobe-categories {
   display: flex;
-  gap: 12px;
-  /* Increased gap */
+  gap: 8px;
+  /* Balanced gap */
   overflow-x: auto;
   padding: 4px 16px 12px;
   /* Padding for horizontal scroll and shadow */
@@ -4017,7 +4018,7 @@ h6 {
 }
 
 .wardrobe-cat-tab {
-  padding: 8px 18px;
+  padding: 6px 14px;
   border-radius: 99px;
   /* Pill shape */
   border: 1px solid var(--color-border-dark);
