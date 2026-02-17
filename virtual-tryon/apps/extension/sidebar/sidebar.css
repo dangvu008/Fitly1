@@ -3884,3 +3884,198 @@ h6 {
   justify-content: space-between;
   align-items: center;
 }
+
+/* ==========================================
+   WARDROBE PAGE
+   ========================================== */
+.wardrobe-section {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.wardrobe-header {
+  background: var(--bg-primary);
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.wardrobe-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.wardrobe-title-bar h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  margin: 0;
+  font-family: 'Playfair Display', serif;
+}
+
+.wardrobe-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  background: var(--bg-secondary);
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+/* Wardrobe Tools (Search & Sort) */
+.wardrobe-tools {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.search-box {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box input {
+  width: 100%;
+  height: 40px;
+  padding: 0 40px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background: var(--bg-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-tertiary);
+  font-size: 20px;
+}
+
+#wardrobe-search-clear {
+  position: absolute;
+  right: 4px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+#wardrobe-search-clear:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-secondary);
+}
+
+/* Wardrobe Categories (Horizontal Scroll) */
+.wardrobe-categories {
+  display: flex;
+  gap: 12px;
+  /* Increased gap */
+  overflow-x: auto;
+  padding: 4px 16px 12px;
+  /* Padding for horizontal scroll and shadow */
+  margin: 0 -16px;
+  /* Offset parent padding to touch edges */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+}
+
+.wardrobe-categories::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+.wardrobe-cat-tab {
+  padding: 8px 18px;
+  border-radius: 99px;
+  /* Pill shape */
+  border: 1px solid var(--color-border-dark);
+  background: white;
+  color: var(--color-foreground-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.wardrobe-cat-tab:hover {
+  background: var(--color-background-secondary);
+  color: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.wardrobe-cat-tab.active {
+  background: var(--color-primary-dark);
+  color: white;
+  border-color: var(--color-primary-dark);
+  box-shadow: var(--shadow-primary);
+  transform: scale(1.05);
+}
+
+/* Wardrobe Grid */
+.wardrobe-grid {
+  flex: 1;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  align-content: start;
+  overflow-y: auto;
+}
+
+/* Wardrobe Empty State */
+.wardrobe-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.wardrobe-empty h3 {
+  margin: 16px 0 8px;
+  color: var(--text-primary);
+  font-family: 'Playfair Display', serif;
+}
+
+.wardrobe-empty p {
+  font-size: 14px;
+  max-width: 240px;
+  line-height: 1.5;
+}

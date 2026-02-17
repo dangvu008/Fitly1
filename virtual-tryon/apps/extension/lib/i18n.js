@@ -250,7 +250,7 @@
             buy_gems: 'Mua Gems',
 
             // Sections
-            your_photo: 'Ảnh của bạn',
+            your_photo: 'Ảnh toàn thân',
             upload_photo: 'Tải ảnh',
             select_below: 'Chọn ảnh bên dưới hoặc tải lên',
             saved_photos: 'Ảnh đã lưu',

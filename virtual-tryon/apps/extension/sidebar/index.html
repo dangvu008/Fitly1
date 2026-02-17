@@ -423,6 +423,7 @@
                                 <p>Chọn 1 món từ mỗi danh mục để thử đồ</p>
                             </div>
                         </div>
+                        <button id="open-wardrobe-btn" class="section-action">Tủ đồ của bạn</button>
                     </div>
 
                     <!-- Tabs -->
@@ -528,148 +529,7 @@
                 </div>
             </section>
 
-            <!-- Share Lookbook Section -->
-            <section id="share-lookbook-section" class="section share-section hidden">
-                <!-- Header -->
-                <div class="share-header">
-                    <button id="close-share-btn" class="icon-btn-plain">
-                        <span class="material-symbols-outlined">arrow_back</span>
-                    </button>
-                    <h2 class="share-title">The Lookbook</h2>
-                    <button class="icon-btn-plain">
-                        <span class="material-symbols-outlined">more_horiz</span>
-                    </button>
-                </div>
 
-                <!-- Scrollable Content -->
-                <div class="share-content">
-                    <!-- Lookbook Card -->
-                    <div id="lookbook-card" class="lookbook-card">
-                        <div class="lookbook-brand">GEMINI STYLIST</div>
-
-                        <!-- Images Container (1 or 2 images) -->
-                        <div id="lookbook-images" class="lookbook-images-container">
-                            <!-- Injected via JS -->
-                        </div>
-
-                        <!-- Editable Text -->
-                        <div class="lookbook-caption-container">
-                            <div class="lookbook-divider"></div>
-                            <div id="lookbook-caption" class="lookbook-caption" contenteditable="true"
-                                spellcheck="false">
-                                Help me choose the perfect fit for tonight's gala ✨
-                            </div>
-                            <div class="lookbook-subcaption">SPRING COLLECTION 2024</div>
-                        </div>
-
-                        <!-- Reaction Buttons (Decorative) -->
-                        <div class="lookbook-reactions">
-                            <button class="reaction-circle pink"><span
-                                    class="material-symbols-outlined">favorite</span></button>
-                            <button class="reaction-circle yellow"><span
-                                    class="material-symbols-outlined">auto_awesome</span></button>
-                            <button class="reaction-circle white"><span
-                                    class="material-symbols-outlined">question_mark</span></button>
-                        </div>
-                    </div>
-
-                    <!-- Share to Socials -->
-                    <div class="share-socials-section">
-                        <h3 class="share-section-title">Share to Socials</h3>
-                        <div class="social-grid">
-                            <button class="social-item" data-platform="instagram">
-                                <div class="social-icon-circle instagram">
-                                    <img src="../assets/icon-instagram.svg" alt="IG"
-                                        onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiByeD0iNSIgcnk9IjUiLz48cGF0aCBkPSJNMTYgMTEuMzdBNCADIDAgMSAxIDEyLjYzIDggNCA0IDAgMCAxIDE2IDExLjM3eiIvPjxsaW5lIHgxPSIxNy41IiB5MT0iNi41IiB4Mj0iMTcuNTEiIHkyPSI2LjUiLz48L3N2Zz4='">
-                                </div>
-                                <span class="social-label">Story</span>
-                            </button>
-                            <button class="social-item" data-platform="twitter">
-                                <div class="social-icon-circle twitter">
-                                    <span class="social-text-icon">𝕏</span>
-                                </div>
-                                <span class="social-label">X</span>
-                            </button>
-                            <button class="social-item" data-platform="telegram">
-                                <div class="social-icon-circle telegram">
-                                    <span class="material-symbols-outlined">send</span>
-                                </div>
-                                <span class="social-label">Send</span>
-                            </button>
-                            <button class="social-item" data-platform="more">
-                                <div class="social-icon-circle more">
-                                    <span class="material-symbols-outlined">more_horiz</span>
-                                </div>
-                                <span class="social-label">More</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Copy Link -->
-                    <div class="copy-link-card">
-                        <div class="link-icon-circle">
-                            <span class="material-symbols-outlined">link</span>
-                        </div>
-                        <div class="link-info">
-                            <span class="link-label">STYLIST LINK</span>
-                            <span class="link-url">fitly.app/share/x839z...</span>
-                        </div>
-                        <button id="copy-link-btn" class="copy-pill-btn">Copy</button>
-                    </div>
-                </div>
-
-                <!-- Bottom Button -->
-                <div class="share-footer">
-                    <button id="download-final-btn" class="download-block-btn">
-                        DOWNLOAD LOOKBOOK <span class="material-symbols-outlined">arrow_downward</span>
-                    </button>
-                </div>
-            </section>
-            <section id="result-section" class="section gallery-section hidden">
-                <!-- Gallery Header -->
-                <div class="gallery-header-top">
-                    <div class="gallery-title-group">
-                        <div class="gallery-subtitle">
-                            <span class="material-symbols-outlined sparkle-icon">auto_awesome</span>
-                            BỘ SƯU TẬP
-                        </div>
-                        <h2 class="gallery-title">Thư viện ảnh</h2>
-                    </div>
-                    <div class="gallery-actions">
-                        <button class="icon-btn-circle" title="Bộ lọc">
-                            <span class="material-symbols-outlined">tune</span>
-                        </button>
-                        <button id="close-gallery-btn" class="icon-btn-circle" title="Đóng">
-                            <span class="material-symbols-outlined">close</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Tabs -->
-                <div class="gallery-tabs">
-                    <button class="gallery-tab active" data-tab="latest">Mới nhất</button>
-                    <button class="gallery-tab" data-tab="shared">Đã chia sẻ</button>
-                    <button class="gallery-tab" data-tab="draft">Nháp</button>
-                    <button class="gallery-tab" data-tab="archived">Lưu trữ</button>
-                </div>
-
-                <!-- Gallery Grid -->
-                <div id="result-thumbnails" class="gallery-grid">
-                    <!-- Results injected by JS -->
-                </div>
-
-                <!-- Sticky Action Bar -->
-                <div class="gallery-sticky-actions">
-                    <button id="download-lookbook-btn" class="action-pill-btn light">
-                        <span class="material-symbols-outlined">download</span>
-                        Tải Lookbook
-                    </button>
-                    <button id="share-friends-btn" class="action-pill-btn dark">
-                        <span class="material-symbols-outlined">ios_share</span>
-                        Chia sẻ
-                    </button>
-                </div>
-            </section>
 
 
 
@@ -679,7 +539,206 @@
                     ⌨️ Phím tắt: <kbd>V</kbd> <kbd>T</kbd> <kbd>C</kbd> <kbd>R</kbd> <kbd>1-9</kbd>
                 </span>
             </div>
+
         </main>
+
+        <!-- Wardrobe Page Section (Full Screen) -->
+        <section id="wardrobe-section" class="section wardrobe-section hidden">
+            <!-- Header -->
+            <div class="wardrobe-header">
+                <div class="wardrobe-title-bar">
+                    <button id="close-wardrobe-btn" class="icon-btn-plain">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <h2>Tủ đồ của bạn</h2>
+                    <div class="wardrobe-actions">
+                        <span class="wardrobe-count" id="wardrobe-total-count">0 items</span>
+                    </div>
+                </div>
+
+                <!-- Search & Filter Bar -->
+                <div class="wardrobe-tools">
+                    <div class="search-box">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input type="text" id="wardrobe-search" placeholder="Tìm kiếm...">
+                        <button id="wardrobe-search-clear" class="hidden">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <button id="wardrobe-sort-btn" class="icon-btn-plain" title="Sắp xếp">
+                        <span class="material-symbols-outlined">sort</span>
+                    </button>
+                </div>
+
+                <!-- Categories Tabs (Scrollable) -->
+                <div class="wardrobe-categories scroll-hide">
+                    <button class="wardrobe-cat-tab active" data-category="all">Tất cả</button>
+                    <button class="wardrobe-cat-tab" data-category="top">Áo</button>
+                    <button class="wardrobe-cat-tab" data-category="bottom">Quần</button>
+                    <button class="wardrobe-cat-tab" data-category="dress">Váy</button>
+                    <button class="wardrobe-cat-tab" data-category="shoes">Giày</button>
+                    <button class="wardrobe-cat-tab" data-category="accessories">Phụ kiện</button>
+                </div>
+            </div>
+
+            <!-- Grid Content -->
+            <div id="wardrobe-grid" class="wardrobe-grid scroll-y">
+                <!-- Wardrobe items injected by JS -->
+            </div>
+
+            <!-- Empty State (Hidden) -->
+            <div id="wardrobe-empty" class="wardrobe-empty hidden">
+                <div class="empty-icon-circle">
+                    <span class="material-symbols-outlined">checkroom</span>
+                </div>
+                <h3>Tủ đồ trống trơn!</h3>
+                <p>Hãy chuột phải vào ảnh quần áo trên web để thêm vào đây nhé.</p>
+            </div>
+        </section>
+
+        <!-- Share Lookbook Section -->
+        <section id="share-lookbook-section" class="section share-section hidden">
+            <!-- Header -->
+            <div class="share-header">
+                <button id="close-share-btn" class="icon-btn-plain">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <h2 class="share-title">The Lookbook</h2>
+                <button class="icon-btn-plain">
+                    <span class="material-symbols-outlined">more_horiz</span>
+                </button>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="share-content">
+                <!-- Lookbook Card -->
+                <div id="lookbook-card" class="lookbook-card">
+                    <div class="lookbook-brand">GEMINI STYLIST</div>
+
+                    <!-- Images Container (1 or 2 images) -->
+                    <div id="lookbook-images" class="lookbook-images-container">
+                        <!-- Injected via JS -->
+                    </div>
+
+                    <!-- Editable Text -->
+                    <div class="lookbook-caption-container">
+                        <div class="lookbook-divider"></div>
+                        <div id="lookbook-caption" class="lookbook-caption" contenteditable="true" spellcheck="false">
+                            Help me choose the perfect fit for tonight's gala ✨
+                        </div>
+                        <div class="lookbook-subcaption">SPRING COLLECTION 2024</div>
+                    </div>
+
+                    <!-- Reaction Buttons (Decorative) -->
+                    <div class="lookbook-reactions">
+                        <button class="reaction-circle pink"><span
+                                class="material-symbols-outlined">favorite</span></button>
+                        <button class="reaction-circle yellow"><span
+                                class="material-symbols-outlined">auto_awesome</span></button>
+                        <button class="reaction-circle white"><span
+                                class="material-symbols-outlined">question_mark</span></button>
+                    </div>
+                </div>
+
+                <!-- Share to Socials -->
+                <div class="share-socials-section">
+                    <h3 class="share-section-title">Share to Socials</h3>
+                    <div class="social-grid">
+                        <button class="social-item" data-platform="instagram">
+                            <div class="social-icon-circle instagram">
+                                <img src="../assets/icon-instagram.svg" alt="IG"
+                                    onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiByeD0iNSIgcnk9IjUiLz48cGF0aCBkPSJNMTYgMTEuMzdBNCADIDAgMSAxIDEyLjYzIDggNCA0IDAgMCAxIDE2IDExLjM3eiIvPjxsaW5lIHgxPSIxNy41IiB5MT0iNi41IiB4Mj0iMTcuNTEiIHkyPSI2LjUiLz48L3N2Zz4='">
+                            </div>
+                            <span class="social-label">Story</span>
+                        </button>
+                        <button class="social-item" data-platform="twitter">
+                            <div class="social-icon-circle twitter">
+                                <span class="social-text-icon">𝕏</span>
+                            </div>
+                            <span class="social-label">X</span>
+                        </button>
+                        <button class="social-item" data-platform="telegram">
+                            <div class="social-icon-circle telegram">
+                                <span class="material-symbols-outlined">send</span>
+                            </div>
+                            <span class="social-label">Send</span>
+                        </button>
+                        <button class="social-item" data-platform="more">
+                            <div class="social-icon-circle more">
+                                <span class="material-symbols-outlined">more_horiz</span>
+                            </div>
+                            <span class="social-label">More</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Copy Link -->
+                <div class="copy-link-card">
+                    <div class="link-icon-circle">
+                        <span class="material-symbols-outlined">link</span>
+                    </div>
+                    <div class="link-info">
+                        <span class="link-label">STYLIST LINK</span>
+                        <span class="link-url">fitly.app/share/x839z...</span>
+                    </div>
+                    <button id="copy-link-btn" class="copy-pill-btn">Copy</button>
+                </div>
+            </div>
+
+            <!-- Bottom Button -->
+            <div class="share-footer">
+                <button id="download-final-btn" class="download-block-btn">
+                    DOWNLOAD LOOKBOOK <span class="material-symbols-outlined">arrow_downward</span>
+                </button>
+            </div>
+        </section>
+
+        <section id="result-section" class="section gallery-section hidden">
+            <!-- Gallery Header -->
+            <div class="gallery-header-top">
+                <div class="gallery-title-group">
+                    <div class="gallery-subtitle">
+                        <span class="material-symbols-outlined sparkle-icon">auto_awesome</span>
+                        BỘ SƯU TẬP
+                    </div>
+                    <h2 class="gallery-title">Thư viện ảnh</h2>
+                </div>
+                <div class="gallery-actions">
+                    <button class="icon-btn-circle" title="Bộ lọc">
+                        <span class="material-symbols-outlined">tune</span>
+                    </button>
+                    <button id="close-gallery-btn" class="icon-btn-circle" title="Đóng">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="gallery-tabs">
+                <button class="gallery-tab active" data-tab="latest">Mới nhất</button>
+                <button class="gallery-tab" data-tab="shared">Đã chia sẻ</button>
+                <button class="gallery-tab" data-tab="draft">Nháp</button>
+                <button class="gallery-tab" data-tab="archived">Lưu trữ</button>
+            </div>
+
+            <!-- Gallery Grid -->
+            <div id="result-thumbnails" class="gallery-grid">
+                <!-- Results injected by JS -->
+            </div>
+
+            <!-- Sticky Action Bar -->
+            <div class="gallery-sticky-actions">
+                <button id="download-lookbook-btn" class="action-pill-btn light">
+                    <span class="material-symbols-outlined">download</span>
+                    Tải Lookbook
+                </button>
+                <button id="share-friends-btn" class="action-pill-btn dark">
+                    <span class="material-symbols-outlined">ios_share</span>
+                    Chia sẻ
+                </button>
+            </div>
+        </section>
+
 
         <!-- Note: Result popups are now injected directly into the webpage for full-screen dragging -->
 

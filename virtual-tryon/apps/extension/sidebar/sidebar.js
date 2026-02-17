@@ -254,6 +254,7 @@ async function loadSelectedItems() {
 
 async function init() {
     await checkAuthState();
+    initWardrobe(); // Init Wardrobe Page logic
     await loadUserModels();
     await loadModelImage();
     await checkPendingImage();
@@ -4472,3 +4473,264 @@ async function renderCreatedOutfitsList() {
 
 // Initial render
 renderCreatedOutfitsList();
+
+// ==========================================
+// WARDROBE PAGE LOGIC
+// ==========================================
+
+let wardrobeState = {
+    category: 'all',
+    search: '',
+    sort: 'newest'
+};
+
+function initWardrobe() {
+    // Event Listeners
+    const openBtn = document.getElementById('open-wardrobe-btn');
+    const closeBtn = document.getElementById('close-wardrobe-btn');
+    const menuBtn = document.getElementById('menu-wardrobe'); // From profile menu
+
+    if (openBtn) openBtn.addEventListener('click', openWardrobe);
+    if (closeBtn) closeBtn.addEventListener('click', closeWardrobe);
+    if (menuBtn) menuBtn.addEventListener('click', () => {
+        openWardrobe();
+        // Close profile menu if open
+        const profileMenu = document.getElementById('profile-menu');
+        if (profileMenu && !profileMenu.classList.contains('hidden')) {
+            profileMenu.classList.add('hidden');
+        }
+    });
+
+    // Search
+    const searchInput = document.getElementById('wardrobe-search');
+    const clearSearchBtn = document.getElementById('wardrobe-search-clear');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            wardrobeState.search = e.target.value.toLowerCase().trim();
+            if (clearSearchBtn) {
+                clearSearchBtn.classList.toggle('hidden', !wardrobeState.search);
+            }
+            renderWardrobeGrid();
+        });
+    }
+
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            if (searchInput) {
+                searchInput.value = '';
+                wardrobeState.search = '';
+                clearSearchBtn.classList.add('hidden');
+                renderWardrobeGrid();
+            }
+        });
+    }
+
+    // Categories
+    const categoryTabs = document.querySelectorAll('.wardrobe-cat-tab');
+    categoryTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all
+            categoryTabs.forEach(t => t.classList.remove('active'));
+            // Add to clicked
+            tab.classList.add('active');
+            // Update state
+            wardrobeState.category = tab.dataset.category;
+            renderWardrobeGrid();
+        });
+    });
+
+    // Sort
+    const sortBtn = document.getElementById('wardrobe-sort-btn');
+    if (sortBtn) {
+        sortBtn.addEventListener('click', () => {
+            wardrobeState.sort = wardrobeState.sort === 'newest' ? 'oldest' : 'newest';
+
+            // Icon feedback
+            const icon = sortBtn.querySelector('.material-symbols-outlined');
+            if (icon) {
+                icon.style.transform = wardrobeState.sort === 'oldest' ? 'rotate(180deg)' : 'rotate(0deg)';
+                icon.style.transition = 'transform 0.3s ease';
+            }
+
+            // Toast feedback
+            showToast(wardrobeState.sort === 'newest' ? 'Sắp xếp: Mới nhất' : 'Sắp xếp: Cũ nhất', 'info');
+
+            renderWardrobeGrid();
+        });
+    }
+
+    // Setup Delegation
+    setupWardrobeGridDelegation();
+}
+
+function openWardrobe() {
+    const mainContent = document.getElementById('main-content');
+    const wardrobeSection = document.getElementById('wardrobe-section');
+
+    // Refresh data in case new items were added
+    // In a real app, maybe fetch from API here. For now we rely on state.recentClothing
+
+    if (mainContent) mainContent.classList.add('hidden');
+    if (wardrobeSection) {
+        wardrobeSection.classList.remove('hidden');
+
+        // Update count
+        const countEl = document.getElementById('wardrobe-total-count');
+        if (countEl) countEl.textContent = `${state.recentClothing.length} items`;
+
+        renderWardrobeGrid();
+    }
+}
+
+function closeWardrobe() {
+    const mainContent = document.getElementById('main-content');
+    const wardrobeSection = document.getElementById('wardrobe-section');
+
+    if (wardrobeSection) wardrobeSection.classList.add('hidden');
+    if (mainContent) mainContent.classList.remove('hidden');
+}
+
+function renderWardrobeGrid() {
+    const grid = document.getElementById('wardrobe-grid');
+    const emptyState = document.getElementById('wardrobe-empty');
+    if (!grid) return;
+
+    // Filter items
+    let filteredItems = state.recentClothing.filter(item => {
+        // 1. Search
+        if (wardrobeState.search) {
+            const name = (item.name || '').toLowerCase();
+            const source = (item.sourceUrl || '').toLowerCase();
+            if (!name.includes(wardrobeState.search) && !source.includes(wardrobeState.search)) {
+                return false;
+            }
+        }
+
+        // 2. Category
+        if (wardrobeState.category !== 'all') {
+            // Check if item has category, otherwise try to guess or show in all
+            // Current mock data might not have category, so we key off 'category' field if exists
+            // Or we check id/name. For now, let's assume if category is missing, we show in 'all' only, 
+            // unless we strictly enforce it. 
+            // To be safe for demo: matches if category equals OR item.category is undefined (lazy match)
+            if (item.category && item.category !== wardrobeState.category) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    // Sort
+    filteredItems.sort((a, b) => {
+        // Use createdAt if available, otherwise fallback to id or a safe date
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (parseInt(a.id) || 0);
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (parseInt(b.id) || 0);
+
+        return wardrobeState.sort === 'newest' ? timeB - timeA : timeA - timeB;
+    });
+
+    const countEl = document.getElementById('wardrobe-total-count');
+    if (countEl) countEl.textContent = `${filteredItems.length} items`;
+
+    // Update UI
+    if (filteredItems.length === 0) {
+        grid.innerHTML = '';
+        if (emptyState) emptyState.classList.remove('hidden');
+        return;
+    }
+
+    if (emptyState) emptyState.classList.add('hidden');
+
+    grid.innerHTML = filteredItems.map(item => {
+        const isSelected = state.selectedItems.some(i => i.imageUrl === item.imageUrl);
+        const hasSourceUrl = item.sourceUrl && item.sourceUrl.startsWith('http');
+
+        // Label logic
+        let poseLabel = item.name || 'Clothing';
+        if (item.category) poseLabel += ` • ${CATEGORY_LABELS[item.category] || item.category}`;
+
+        return `
+            <div class="clothing-history-item ${isSelected ? 'selected' : ''}" 
+                 title="${isSelected ? 'Đang chọn' : 'Click để chọn'}">
+                <img src="${item.imageUrl}" alt="Clothing" loading="lazy"
+                     onerror="this.onerror=null; loadCachedFallback(this, '${item.cachedKey || item.id || ''}');">
+                
+                <div class="thumbnail-overlay">
+                    <span class="thumbnail-label">${poseLabel}</span>
+                </div>
+                
+                ${isSelected ? '<div class="status-dot"></div>' : ''}
+
+                <div class="clothing-item-actions">
+                     <button class="clothing-action-btn" onclick="quickTryClothingFromWardrobe('${item.imageUrl}', '${item.sourceUrl || ''}', '${item.id || ''}')" title="Thử ngay">
+                        ✨
+                    </button>
+                    ${hasSourceUrl ? `<button class="clothing-action-btn" onclick="openProductPage('${item.sourceUrl}')" title="Mua">🛒</button>` : ''}
+                    <button class="clothing-action-btn delete-btn" onclick="deleteClothingFromWardrobe('${item.id}', '${item.imageUrl}')" title="Xóa">×</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Helper for inline onclicks in template string (cleaner than adding listeners to all)
+// In a framework, we'd use event delegation or component logic. 
+// For vanilla JS, attaching to window is checking way, but better to use delegation on grid.
+// Let's use event delegation on the grid container instead of onclick="..."
+
+// Re-attach delegation
+function setupWardrobeGridDelegation() {
+    const grid = document.getElementById('wardrobe-grid');
+    if (!grid) return;
+
+    grid.addEventListener('click', async (e) => {
+        const target = e.target;
+        // Check if click inside an action button (that has onclick) -> handled by inline
+        // If click on card but NOT button -> toggle selection
+
+        if (target.closest('.clothing-action-btn')) return;
+
+        const card = target.closest('.clothing-history-item');
+        if (!card) return;
+
+        // Handle Select
+        // Re-find image and data
+        const img = card.querySelector('img');
+        if (img) {
+            // Find item in state
+            const item = state.recentClothing.find(i => i.imageUrl === img.getAttribute('src'));
+            if (item) {
+                toggleClothingSelection({
+                    id: item.id || `item-${Date.now()}`,
+                    imageUrl: item.imageUrl,
+                    name: item.name,
+                    category: item.category || 'top', // Default or real
+                    sourceUrl: item.sourceUrl
+                });
+                renderWardrobeGrid(); // Re-render to show selection state
+            }
+        }
+    });
+}
+
+// Global functions for onclick (Quick fix for template strings)
+window.quickTryClothingFromWardrobe = async (url, source, id) => {
+    // Close wardrobe first? Or stay? try-on usually redirects to main view prompt
+    // For now, let's close wardrobe and trigger try on
+    closeWardrobe();
+    await quickTryClothing(url, source);
+};
+
+window.deleteClothingFromWardrobe = async (id, url) => {
+    if (confirm('Bạn chắc chắn muốn xóa item này?')) {
+        await deleteClothingFromHistory(id, url);
+        // re-render happens inside renderClothingHistory but we also need to update Wardrobe grid
+        renderWardrobeGrid();
+    }
+};
+
+window.openProductPage = (url) => {
+    if (url) window.open(url, '_blank');
+};
