@@ -609,10 +609,7 @@ h6 {
   box-shadow: var(--shadow-md);
 }
 
-/* Blur Face Effect */
-.image-container.has-image img.preview-image {
-  /* Note: The class .blur-face is applied to the img element via JS */
-}
+/* Blur Face Effect - Handled by JS */
 
 /* Model Container Special Styling - Minimal Reference */
 .image-container.model-container {
@@ -1570,19 +1567,20 @@ h6 {
   color: white;
 }
 
-/* Gallery Grid */
+/* Gallery Grid - 3 Columns for more items */
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  /* Reduced gap from 16px */
   padding-bottom: 80px;
-  /* Space for sticky actions */
 }
 
-/* Gallery Card */
+/* Gallery Card - More Compact */
 .gallery-card {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
+  /* Reduced from 16px */
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: transform 0.2s, box-shadow 0.2s;
@@ -1613,58 +1611,133 @@ h6 {
   position: absolute;
   top: 10px;
   left: 10px;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: white;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid transparent;
+  opacity: 0;
+  transform: scale(0.8);
+  z-index: 2;
+}
+
+/* Show on card hover */
+.gallery-card:hover .card-select-check {
+  opacity: 0.7;
+  transform: scale(1);
 }
 
 .card-select-check.selected {
+  opacity: 1 !important;
+  transform: scale(1) !important;
   background: #ec4899;
-  /* Pink */
   color: white;
+  border-color: white;
+  box-shadow: 0 2px 12px rgba(236, 72, 153, 0.4);
 }
 
 .card-select-check .material-symbols-outlined {
   font-size: 16px;
-  color: #ec4899;
+  color: #9ca3af;
+  transition: color 0.2s;
 }
 
 .card-select-check.selected .material-symbols-outlined {
   color: white;
 }
 
-.card-match-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: white;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-foreground);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+/* Selected card glow */
+.gallery-card.card-selected {
+  box-shadow: 0 0 0 2px #ec4899, 0 4px 16px rgba(236, 72, 153, 0.2);
 }
 
-.card-feature-badge {
+/* Star Rating Badge - Interactive */
+.card-star-rating {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background: #ec4899;
+  top: 6px;
+  /* Reduced */
+  right: 6px;
+  /* Reduced */
+  background: rgba(0, 0, 0, 0.4);
+  /* Lighter */
+  backdrop-filter: blur(8px);
+  padding: 2px 6px;
+  /* More compact */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.card-star-rating .stars {
+  font-size: 10px;
+  /* Smaller */
+  color: #fbbf24;
+  letter-spacing: -0.5px;
+  display: flex;
+  cursor: pointer;
+}
+
+.card-star-rating .star {
+  transition: transform 0.1s;
+}
+
+.card-star-rating .star:hover {
+  transform: scale(1.3);
+}
+
+.card-star-rating .score {
+  display: none;
+  /* Per user request: loại bỏ điểm biểu thị bằng số */
+}
+
+/* Tag Badge */
+.card-tag-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: var(--tag-color, #6b7280);
   color: white;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Gallery Empty State */
+.gallery-empty-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--color-foreground-secondary);
+  gap: 8px;
+}
+
+.gallery-empty-state .material-symbols-outlined {
+  font-size: 48px;
+  opacity: 0.4;
+}
+
+.gallery-empty-state p {
+  font-size: 14px;
+  opacity: 0.7;
 }
 
 /* Card Content */
@@ -1676,14 +1749,27 @@ h6 {
 }
 
 .gallery-card-title {
-  font-family: var(--font-family-heading);
-  font-size: 15px;
-  font-weight: 600;
+  font-family: var(--font-family-body);
+  /* Less formal body font for compact cards */
+  font-size: 11px;
+  /* Smaller */
+  font-weight: 700;
   color: var(--color-foreground);
   margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  outline: none;
+}
+
+.gallery-card-title:focus {
+  border-bottom-color: #ec4899;
+  text-overflow: clip;
+  overflow: visible;
+}
+
+.gallery-card-title:hover:not(:focus) {
+  border-bottom-color: rgba(0, 0, 0, 0.1);
 }
 
 .gallery-card-meta {
@@ -1700,41 +1786,45 @@ h6 {
   margin-top: auto;
 }
 
-.card-swap-btn {
+.card-detail-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: #f5f5f5;
+  gap: 4px;
+  padding: 6px 8px;
+  /* Compact */
+  background: #fdf6f2;
+  /* Warm secondary tint */
   border: none;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-foreground);
+  border-radius: 8px;
+  font-size: 11px;
+  /* Smaller font */
+  font-weight: 700;
+  color: var(--color-primary-dark);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-.card-swap-btn:hover {
-  background: #eeeeee;
+.card-detail-btn:hover {
+  background: #f5e9e2;
+  transform: translateY(-1px);
 }
 
 .card-delete-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 28px;
+  /* Smaller */
+  height: 28px;
+  /* Smaller */
+  border-radius: 8px;
   background: #fee2e2;
-  /* Light red */
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: #ef4444;
-  /* Red */
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .card-delete-btn:hover {
@@ -3183,10 +3273,12 @@ h6 {
 /* --- VISUAL CARD (Top) --- */
 .visual-card {
   background: white;
-  border-radius: 32px;
-  padding: 24px;
+  border-radius: 24px;
+  /* Reduced from 32px */
+  padding: 16px;
+  /* Reduced from 24px */
   box-shadow:
-    0 20px 40px rgba(141, 110, 99, 0.08),
+    0 12px 24px rgba(141, 110, 99, 0.06),
     0 1px 2px rgba(0, 0, 0, 0.02);
   display: flex;
   flex-direction: column;
@@ -3197,19 +3289,23 @@ h6 {
 .visual-header {
   font-family: var(--font-family-heading);
   /* Playfair Display */
-  font-size: 14px;
+  font-size: 13px;
+  /* Reduced from 14px */
   font-weight: 700;
   letter-spacing: 1px;
   color: #5d4037;
   text-transform: uppercase;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+  /* Reduced from 20px */
   opacity: 0.8;
 }
 
 .visual-image-container {
   width: 100%;
-  aspect-ratio: 4/5;
-  /* Taller portrait aspect */
+  aspect-ratio: 1/1;
+  /* Reduced from 4/5 for more compact height */
+  max-height: 240px;
+  /* Added constraint */
   position: relative;
   display: flex;
   align-items: center;
@@ -3627,13 +3723,15 @@ h6 {
 }
 
 .bubble-image-wrapper {
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  /* Reduced from 64px */
+  height: 52px;
+  /* Reduced from 64px */
   border-radius: 50%;
   border: 2px solid white;
   background: white;
   box-shadow:
-    0 10px 25px rgba(0, 0, 0, 0.2),
+    0 8px 16px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   position: relative;
@@ -3704,8 +3802,80 @@ h6 {
 /* Update visual-header font */
 .visual-header {
   font-family: 'Playfair Display', serif !important;
-  font-size: 18px !important;
+  font-size: 15px !important;
+  /* Reduced from 18px */
   letter-spacing: 2px !important;
   font-weight: 500 !important;
   color: #5d4037 !important;
+  margin-bottom: 8px !important;
+}
+
+/* ==========================================
+   HORIZONTAL OUTFITS SCROLL
+   ========================================== */
+
+.horizontal-outfits-scroll {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px 8px;
+  scrollbar-width: none;
+}
+
+.horizontal-outfits-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.horizontal-outfit-card {
+  flex: 0 0 110px;
+  scroll-snap-align: start;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.horizontal-outfit-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.horizontal-outfit-card img {
+  width: 110px;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.horizontal-outfit-card .outfit-card-name {
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.horizontal-outfit-card .outfit-card-time {
+  padding: 0 8px 6px;
+  font-size: 9px;
+  color: var(--color-foreground-secondary);
+  text-align: center;
+}
+
+/* Created outfits section */
+.created-outfits-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }

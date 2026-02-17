@@ -24,6 +24,7 @@ let state = {
     modelImage: null,
     clothingImage: null,
     selectedItems: [], // Array of { id, imageUrl, name, category }
+    selectedCategory: 'top', // Active category tab: top, bottom, dress, shoes, accessories
     clothingSourceUrl: null, // URL of the product page where clothing was captured
     resultImage: null,
     isProcessing: false,
@@ -33,10 +34,11 @@ let state = {
     defaultModelId: null,
     selectedModelId: null,
     // Multiple results support
-    results: [], // Array of { id, name, imageUrl, clothingUrl, modelUrl, sourceUrl, timestamp }
+    results: [], // Array of { id, name, imageUrl, clothingUrl, modelUrl, sourceUrl, timestamp, tag }
     activePopups: [], // Array of popup IDs currently open
     resultWindows: {}, // Map of result ID to window ID for tracking open popup windows
     nextResultId: 1,
+    activeGalleryTab: 'latest', // Gallery filter tab: latest, shared, drafts, archived
     // Language support
     locale: 'vi',
     // Panel states
@@ -89,7 +91,24 @@ function getTimeAgo(timestamp) {
 // Config
 const GEM_COST_STANDARD = 1;
 const GEM_COST_HD = 2;
-const MAX_SELECTED_ITEMS = 4;
+const MAX_SELECTED_ITEMS = 5; // One per category
+
+// Category labels for Vietnamese display
+const CATEGORY_LABELS = {
+    top: 'Áo',
+    bottom: 'Quần',
+    dress: 'Váy',
+    shoes: 'Giày',
+    accessories: 'Phụ kiện'
+};
+
+// Tag labels for gallery items
+const TAG_LABELS = {
+    latest: { label: 'Mới', icon: 'schedule', color: '#3b82f6' },
+    shared: { label: 'Đã chia sẻ', icon: 'share', color: '#10b981' },
+    draft: { label: 'Nháp', icon: 'edit_note', color: '#f59e0b' },
+    archived: { label: 'Lưu trữ', icon: 'archive', color: '#6b7280' }
+};
 
 // DOM Elements
 const $ = (id) => document.getElementById(id);
@@ -156,18 +175,34 @@ const elements = {
 // ==========================================
 
 function toggleClothingSelection(item) {
-    const index = state.selectedItems.findIndex(i => i.imageUrl === item.imageUrl);
+    // Ensure item has a category (fallback to active tab)
+    if (!item.category) {
+        item.category = state.selectedCategory;
+    }
 
-    if (index > -1) {
-        state.selectedItems.splice(index, 1);
-        showToast('Đã bỏ chọn', 'info');
+    const existingIndex = state.selectedItems.findIndex(i => i.imageUrl === item.imageUrl);
+
+    if (existingIndex > -1) {
+        // Deselect: remove the item
+        state.selectedItems.splice(existingIndex, 1);
+        showToast(`Đã bỏ chọn ${CATEGORY_LABELS[item.category] || 'item'}`, 'info');
     } else {
-        if (state.selectedItems.length >= MAX_SELECTED_ITEMS) {
-            showToast(`Tối đa ${MAX_SELECTED_ITEMS} món đồ`, 'warning');
-            return false;
+        // Check if same category already has an item → replace
+        const sameCategoryIndex = state.selectedItems.findIndex(i => i.category === item.category);
+
+        if (sameCategoryIndex > -1) {
+            // Replace existing item of the same category
+            state.selectedItems[sameCategoryIndex] = item;
+            showToast(`Đã thay ${CATEGORY_LABELS[item.category] || 'item'} mới`, 'success');
+        } else {
+            // Add new item
+            if (state.selectedItems.length >= MAX_SELECTED_ITEMS) {
+                showToast(`Tối đa ${MAX_SELECTED_ITEMS} món đồ (1 món/danh mục)`, 'warning');
+                return false;
+            }
+            state.selectedItems.push(item);
+            showToast(`Đã chọn ${CATEGORY_LABELS[item.category] || 'item'}`, 'success');
         }
-        state.selectedItems.push(item);
-        showToast('Đã chọn món đồ', 'success');
     }
 
     // Sync legacy state
@@ -180,7 +215,37 @@ function toggleClothingSelection(item) {
 
     updateUI();
     renderClothingHistory(); // Refresh carousel to update checkmarks
+    saveSelectedItems(); // Persist selection
     return true;
+}
+
+// Persist selected items to storage
+async function saveSelectedItems() {
+    try {
+        await chrome.storage.local.set({ 'selectedItems': state.selectedItems });
+    } catch (error) {
+        console.error('Failed to save selected items:', error);
+    }
+}
+
+// Load selected items from storage
+async function loadSelectedItems() {
+    try {
+        const result = await chrome.storage.local.get(['selectedItems']);
+        if (result.selectedItems && Array.isArray(result.selectedItems)) {
+            state.selectedItems = result.selectedItems;
+
+            // Sync legacy state for compatibility
+            if (state.selectedItems.length > 0) {
+                state.clothingImage = state.selectedItems[state.selectedItems.length - 1].imageUrl;
+                state.clothingSourceUrl = state.selectedItems[state.selectedItems.length - 1].sourceUrl;
+            }
+
+            updateUI();
+        }
+    } catch (error) {
+        console.error('Failed to load selected items:', error);
+    }
 }
 
 // ==========================================
@@ -193,8 +258,53 @@ async function init() {
     await loadModelImage();
     await checkPendingImage();
     await loadRecentClothing();
+    await loadSelectedItems(); // Load persisted selections
     await loadResults(); // Load saved results
     setupEventListeners();
+    setupInfiniteScroll();
+    initCategoryTabs();
+    initTooltipSystem();
+    listenForMessages();
+    listenForStorageChanges();
+    console.log('Fitly sidebar initialized');
+}
+
+// ==========================================
+// CATEGORY TABS
+// ==========================================
+
+function initCategoryTabs() {
+    const tabsContainer = document.getElementById('category-tabs');
+    if (!tabsContainer) return;
+
+    tabsContainer.querySelectorAll('.cat-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Update active tab
+            tabsContainer.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Update state
+            state.selectedCategory = tab.dataset.category || 'top';
+
+            // Show indicator of selected item for this category (if any)
+            const existingItem = state.selectedItems.find(i => i.category === state.selectedCategory);
+            if (existingItem) {
+                showToast(`${CATEGORY_LABELS[state.selectedCategory]}: đã chọn 1 món`, 'info');
+            }
+        });
+    });
+}
+
+async function init() {
+    await checkAuthState();
+    await loadUserModels();
+    await loadModelImage();
+    await checkPendingImage();
+    await loadRecentClothing();
+    await loadSelectedItems(); // Load persisted selections
+    await loadResults(); // Load saved results
+    setupEventListeners();
+    initCategoryTabs();
     initTooltipSystem();
     listenForMessages();
     listenForStorageChanges();
@@ -654,6 +764,7 @@ function renderClothingHistory() {
                 id: id || `item-${Date.now()}`,
                 imageUrl: url,
                 name: name,
+                category: state.selectedCategory, // Use active tab category
                 sourceUrl: sourceUrl
             });
         });
@@ -734,7 +845,8 @@ async function quickTryClothing(imageUrl, sourceUrl = null) {
         const success = toggleClothingSelection({
             id: `quick-${Date.now()}`,
             imageUrl: imageUrl,
-            name: 'Quick Try Item',
+            name: CATEGORY_LABELS[state.selectedCategory] || 'Quick Try Item',
+            category: state.selectedCategory,
             sourceUrl: sourceUrl
         });
         if (!success) return;
@@ -998,44 +1110,65 @@ function updateUI() {
     updateGalleryUI();
 }
 
+// Global variable for infinite scroll demo
+let visibleResultsCount = 6;
+
 function updateGalleryUI() {
-    const container = document.getElementById('result-thumbnails');
+    const container = elements.resultsGrid;
     if (!container) return;
 
+    // Load mock data for demo if no results
     if (state.results.length === 0) {
-        // Generate Mock Data for Demo if empty
-        const mockResults = [
-            { id: 101, name: 'Everyday Chic', imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 7200000, matchPercentage: 98, isFeatured: false },
-            { id: 102, name: 'Office Ready', imageUrl: 'https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 86400000, matchPercentage: 92, isFeatured: false },
-            { id: 103, name: 'Gala Evening', imageUrl: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 172800000, matchPercentage: 99, isFeatured: true },
-            { id: 104, name: 'City Walker', imageUrl: 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 259200000, matchPercentage: 88, isFeatured: false }
+        state.results = [
+            { id: 101, name: 'Everyday Chic', imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 7200000, matchPercentage: 98, tag: 'latest' },
+            { id: 102, name: 'Office Ready', imageUrl: 'https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 86400000, matchPercentage: 92, tag: 'shared' },
+            { id: 103, name: 'Gala Evening', imageUrl: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 172800000, matchPercentage: 99, tag: 'draft' },
+            { id: 104, name: 'City Walker', imageUrl: 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 259200000, matchPercentage: 88, tag: 'archived' }
         ];
+    }
 
-        container.innerHTML = mockResults.map((result, index) => {
-            const isSelected = state.selectedResultIds?.includes(result.id);
-            // Default first one selected for demo
-            if (index === 0 && (!state.selectedResultIds || state.selectedResultIds.length === 0)) {
-                // isSelected = true; 
-            }
-
-            return renderGalleryCard(result, isSelected);
-        }).join('');
-
-        // Add listeners for mock data
-        addGalleryCardListeners(container, true);
+    const filtered = filterResults(state.results);
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="gallery-empty-state"><span class="material-symbols-outlined">photo_library</span><p>Không có mục nào trong tab này</p></div>`;
         return;
     }
 
-    container.innerHTML = state.results.map((result, index) => {
-        const isSelected = state.selectedResultIds?.includes(result.id);
-        return renderGalleryCard(result, isSelected);
-    }).join('');
+    // Lazy load: only show a subset
+    const visible = filtered.slice(0, visibleResultsCount);
+    container.innerHTML = visible.map(result => renderGalleryCard(result, state.selectedResultIds?.includes(result.id))).join('');
 
-    // Add event listeners
     addGalleryCardListeners(container, false);
-
-    // Update sticky action bar visibility and text
     updateStickyActionBar();
+}
+
+function filterResults(results) {
+    // Tab filtering
+    let filtered = results;
+    if (state.activeGalleryTab && state.activeGalleryTab !== 'latest') {
+        filtered = results.filter(r => r.tag === state.activeGalleryTab);
+    }
+
+    // Sort: Favorites (desc matchPercentage) then Latest (desc timestamp)
+    return filtered.sort((a, b) => {
+        if ((b.matchPercentage || 0) !== (a.matchPercentage || 0)) {
+            return (b.matchPercentage || 0) - (a.matchPercentage || 0);
+        }
+        return (b.timestamp || 0) - (a.timestamp || 0);
+    });
+}
+
+function setupInfiniteScroll() {
+    const section = document.getElementById('gallery-section');
+    if (!section) return;
+
+    section.addEventListener('scroll', () => {
+        if (section.scrollTop + section.clientHeight >= section.scrollHeight - 50) {
+            if (visibleResultsCount < state.results.length) {
+                visibleResultsCount += 3;
+                updateGalleryUI();
+            }
+        }
+    });
 }
 
 
@@ -1049,15 +1182,16 @@ function renderSelectedBubbles() {
     }
 
     container.innerHTML = state.selectedItems.map((item, index) => {
+        const categoryLabel = CATEGORY_LABELS[item.category] || item.name;
         return `
             <div class="selected-item-bubble" data-index="${index}" style="animation-delay: ${index * 0.1}s">
                 <div class="bubble-image-wrapper">
-                    <img src="${item.imageUrl}" alt="${item.name}">
+                    <img src="${item.imageUrl}" alt="${categoryLabel}">
                 </div>
                 <button class="bubble-remove-btn" data-index="${index}" title="Bỏ chọn">
                     <span class="material-symbols-outlined">close</span>
                 </button>
-                <div class="bubble-label">${item.name}</div>
+                <div class="bubble-label">${categoryLabel}</div>
             </div>
         `;
     }).join('');
@@ -1078,30 +1212,64 @@ function renderGalleryCard(result, isSelected) {
     const displayName = result.name || `Outfit #${result.id}`;
     const timeAgo = getTimeAgo(result.timestamp);
     const matchPercentage = result.matchPercentage || 95;
-    const isFeatured = result.isFeatured || false;
+
+    const starValue = (result.matchPercentage || 0) / 20;
+    const fullStars = Math.floor(starValue);
+    const hasHalf = (starValue - fullStars) >= 0.5;
+
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+        let starIcon = 'star';
+        if (i <= fullStars) {
+            starIcon = 'star';
+        } else if (i === fullStars + 1 && hasHalf) {
+            starIcon = 'star_half';
+        } else {
+            starIcon = 'star_outline';
+        }
+        starsHtml += `<span class="star material-symbols-outlined" data-value="${i}" style="font-size: 10px;">${starIcon}</span>`;
+    }
+
+    // Tag badge
+    const tagInfo = TAG_LABELS[result.tag];
+    const tagBadgeHtml = tagInfo && result.tag !== 'latest'
+        ? `<div class="card-tag-badge" style="--tag-color: ${tagInfo.color}">
+               <span class="material-symbols-outlined" style="font-size: 12px;">${tagInfo.icon}</span>
+               ${tagInfo.label}
+           </div>`
+        : '';
 
     return `
-        <div class="gallery-card" data-id="${result.id}">
+        <div class="gallery-card ${isSelected ? 'card-selected' : ''}" data-id="${result.id}">
             <div class="gallery-card-image-wrapper">
                 <img src="${result.imageUrl}" alt="${displayName}" class="gallery-card-image" loading="lazy">
                 
-                <!-- Selection Checkbox -->
+                <!-- Selection Checkmark (hidden until selected) -->
                 <div class="card-select-check ${isSelected ? 'selected' : ''}" data-action="toggle-select">
-                    ${isSelected ? '<span class="material-symbols-outlined">check</span>' : ''}
+                    <span class="material-symbols-outlined">check</span>
                 </div>
 
-                <!-- Badges -->
-                ${isFeatured ? '<div class="card-feature-badge">★ Featured</div>' : `<div class="card-match-badge">${matchPercentage}% Match</div>`}
+                <!-- Star Rating -->
+                <div class="card-star-rating">
+                    <div class="stars">${starsHtml}</div>
+                </div>
+
+                <!-- Tag Badge -->
+                ${tagBadgeHtml}
             </div>
             
             <div class="gallery-card-content">
-                <h3 class="gallery-card-title">${escapeHtml(displayName)}</h3>
+                <h3 class="gallery-card-title" 
+                    contenteditable="true" 
+                    spellcheck="false"
+                    data-id="${result.id}"
+                    title="Click để sửa tên">${escapeHtml(displayName)}</h3>
                 <p class="gallery-card-meta">Created ${timeAgo}</p>
                 
                 <div class="gallery-card-actions">
-                    <button class="card-swap-btn" data-action="open">
-                        <span class="material-symbols-outlined" style="font-size: 18px;">sync_alt</span>
-                        Swap
+                    <button class="card-detail-btn" data-action="detail">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">zoom_in</span>
+                        Chi tiết
                     </button>
                     <button class="card-delete-btn" data-action="delete">
                         <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
@@ -1117,18 +1285,76 @@ function addGalleryCardListeners(container, isMock) {
         const id = parseInt(card.dataset.id);
 
         // Toggle selection
-        card.querySelector('.card-select-check').addEventListener('click', (e) => {
+        card.querySelector('[data-action="toggle-select"]').addEventListener('click', (e) => {
             e.stopPropagation();
             toggleResultSelection(id);
         });
 
-        // Open popup (Swap)
-        card.querySelector('[data-action="open"]').addEventListener('click', (e) => {
+        // Interactive Stars
+        card.querySelectorAll('.card-star-rating .star').forEach(star => {
+            star.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const value = parseFloat(star.dataset.value);
+                const result = (isMock ? mockResults : state.results).find(r => r.id === id);
+                if (result) {
+                    // Simple integer rating for now, or check click position for half star
+                    // For brevity, let's do integer or toggle half if clicking same star
+                    let newValue = value;
+                    if (result.matchPercentage === value * 20) {
+                        newValue = value - 0.5; // Toggle half star if clicking active
+                    }
+                    result.matchPercentage = newValue * 20;
+                    if (!isMock) saveResults();
+                    updateGalleryUI();
+                }
+            });
+        });
+
+        // Inline rename (contentEditable title)
+        const titleEl = card.querySelector('.gallery-card-title');
+        if (titleEl) {
+            const saveRename = () => {
+                const newName = titleEl.textContent.trim();
+                if (newName) {
+                    // Update in state
+                    const result = (isMock ? null : state.results.find(r => r.id === id));
+                    if (result) {
+                        result.name = newName;
+                        // Persist via renameResult logic
+                        const resultIndex = state.results.findIndex(r => r.id === id) + 1;
+                        if (state.activePopups.includes(id)) {
+                            sendToActiveTab({
+                                type: 'UPDATE_POPUP_NAME',
+                                data: { id, name: newName }
+                            });
+                        }
+                        saveResults();
+                    }
+                    showToast('Đã đổi tên outfit', 'success');
+                }
+                titleEl.scrollLeft = 0;
+            };
+
+            titleEl.addEventListener('blur', saveRename);
+            titleEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    titleEl.blur();
+                }
+                if (e.key === 'Escape') {
+                    titleEl.blur();
+                }
+            });
+            // Prevent card click when editing
+            titleEl.addEventListener('click', (e) => e.stopPropagation());
+        }
+
+        // Detail View (Zoom)
+        card.querySelector('[data-action="detail"]').addEventListener('click', (e) => {
             e.stopPropagation();
-            if (isMock) {
-                showToast("Opening swap view...", "info");
-            } else {
-                openResultPopup(id);
+            const result = (isMock ? mockResults : state.results).find(r => r.id === id);
+            if (result) {
+                openImagePopup(result.imageUrl);
             }
         });
 
@@ -2391,6 +2617,16 @@ function setupEventListeners() {
         closeGallery();
     });
 
+    // Gallery filter tabs
+    document.querySelectorAll('.gallery-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.gallery-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            state.activeGalleryTab = tab.dataset.tab || 'latest';
+            updateGalleryUI();
+        });
+    });
+
     // Clothing container click - chọn ảnh từ web
     elements.clothingImageContainer?.addEventListener('click', () => {
         if (state.selectedItems.length === 0) {
@@ -3389,7 +3625,8 @@ function listenForMessages() {
                 toggleClothingSelection({
                     id: `capture-${Date.now()}`,
                     imageUrl: message.imageUrl,
-                    name: 'Captured Item',
+                    name: CATEGORY_LABELS[state.selectedCategory] || 'Captured Item',
+                    category: state.selectedCategory,
                     sourceUrl: message.sourceUrl || null
                 });
                 break;
@@ -4188,20 +4425,29 @@ async function renderCreatedOutfitsList() {
             listContainer.innerHTML = '';
 
             response.outfits.forEach(outfit => {
-                const itemWrapper = document.createElement('div');
-                itemWrapper.className = 'image-container has-image';
-                itemWrapper.style.cursor = 'pointer';
-                itemWrapper.title = outfit.name || 'Outfit';
+                const card = document.createElement('div');
+                card.className = 'horizontal-outfit-card';
+                card.title = outfit.name || 'Outfit';
 
                 const img = document.createElement('img');
                 img.src = outfit.result_image_url;
-                img.className = 'preview-image';
-                img.alt = outfit.name;
+                img.alt = outfit.name || 'Outfit';
+                img.loading = 'lazy';
 
-                itemWrapper.appendChild(img);
+                const nameEl = document.createElement('div');
+                nameEl.className = 'outfit-card-name';
+                nameEl.textContent = outfit.name || 'Outfit';
 
-                // Click to view
-                itemWrapper.onclick = () => {
+                const timeEl = document.createElement('div');
+                timeEl.className = 'outfit-card-time';
+                timeEl.textContent = getTimeAgo(outfit.created_at || Date.now());
+
+                card.appendChild(img);
+                card.appendChild(nameEl);
+                card.appendChild(timeEl);
+
+                // Click to view detail
+                card.onclick = () => {
                     showResultInline({
                         imageUrl: outfit.result_image_url,
                         id: outfit.id,
@@ -4209,7 +4455,7 @@ async function renderCreatedOutfitsList() {
                     });
                 };
 
-                listContainer.appendChild(itemWrapper);
+                listContainer.appendChild(card);
             });
         } else {
             section.classList.add('hidden');

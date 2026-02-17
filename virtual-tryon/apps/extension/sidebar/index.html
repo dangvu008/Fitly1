@@ -426,12 +426,12 @@
                     </div>
 
                     <!-- Tabs -->
-                    <div class="category-tabs">
-                        <button class="cat-tab active">Áo</button>
-                        <button class="cat-tab">Quần</button>
-                        <button class="cat-tab">Váy</button>
-                        <button class="cat-tab">Giày</button>
-                        <button class="cat-tab">Phụ kiện</button>
+                    <div class="category-tabs" id="category-tabs">
+                        <button class="cat-tab active" data-category="top">Áo</button>
+                        <button class="cat-tab" data-category="bottom">Quần</button>
+                        <button class="cat-tab" data-category="dress">Váy</button>
+                        <button class="cat-tab" data-category="shoes">Giày</button>
+                        <button class="cat-tab" data-category="accessories">Phụ kiện</button>
                     </div>
 
                     <!-- Carousel (Reusing Grid ID) -->
@@ -514,15 +514,16 @@
                 </div>
             </section>
 
-            <!-- Created Outfits List -->
+            <!-- Created Outfits - Horizontal List -->
             <section id="created-outfits-list-section" class="section created-outfits-section hidden">
                 <div class="section-header">
                     <h3>
-                        <span class="material-symbols-outlined">style</span>
-                        Outfit đã tạo
+                        <span class="material-symbols-outlined">checkroom</span>
+                        Outfit vừa tạo
                     </h3>
+                    <button id="view-gallery-btn" class="section-action">Xem tất cả</button>
                 </div>
-                <div id="created-outfits-list" class="user-models-grid">
+                <div id="created-outfits-list" class="horizontal-outfits-scroll">
                     <!-- Outfits injected by JS -->
                 </div>
             </section>
@@ -648,7 +649,7 @@
                 <div class="gallery-tabs">
                     <button class="gallery-tab active" data-tab="latest">Mới nhất</button>
                     <button class="gallery-tab" data-tab="shared">Đã chia sẻ</button>
-                    <button class="gallery-tab" data-tab="drafts">Nháp</button>
+                    <button class="gallery-tab" data-tab="draft">Nháp</button>
                     <button class="gallery-tab" data-tab="archived">Lưu trữ</button>
                 </div>
 
