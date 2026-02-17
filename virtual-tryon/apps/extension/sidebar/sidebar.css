@@ -3830,7 +3830,8 @@ h6 {
 }
 
 .horizontal-outfit-card {
-  flex: 0 0 110px;
+  flex: 0 0 80px;
+  /* Reduced from 110px */
   scroll-snap-align: start;
   background: white;
   border-radius: 12px;
@@ -3849,15 +3850,18 @@ h6 {
 }
 
 .horizontal-outfit-card img {
-  width: 110px;
-  height: 140px;
+  width: 80px;
+  /* Reduced from 110px */
+  height: 100px;
+  /* Reduced from 140px */
   object-fit: cover;
   display: block;
 }
 
 .horizontal-outfit-card .outfit-card-name {
-  padding: 6px 8px;
-  font-size: 10px;
+  padding: 4px 6px;
+  font-size: 9px;
+  /* Smaller font */
   font-weight: 700;
   color: var(--color-foreground);
   white-space: nowrap;
@@ -3867,8 +3871,9 @@ h6 {
 }
 
 .horizontal-outfit-card .outfit-card-time {
-  padding: 0 8px 6px;
-  font-size: 9px;
+  padding: 0 6px 4px;
+  font-size: 8px;
+  /* Smaller font */
   color: var(--color-foreground-secondary);
   text-align: center;
 }

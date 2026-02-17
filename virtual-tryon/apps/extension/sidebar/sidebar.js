@@ -295,21 +295,7 @@ function initCategoryTabs() {
     });
 }
 
-async function init() {
-    await checkAuthState();
-    await loadUserModels();
-    await loadModelImage();
-    await checkPendingImage();
-    await loadRecentClothing();
-    await loadSelectedItems(); // Load persisted selections
-    await loadResults(); // Load saved results
-    setupEventListeners();
-    initCategoryTabs();
-    initTooltipSystem();
-    listenForMessages();
-    listenForStorageChanges();
-    console.log('Fitly sidebar initialized');
-}
+// NOTE: init() is defined above (line ~255). Do not duplicate.
 
 // ==========================================
 // TOOLTIP SYSTEM
@@ -620,9 +606,14 @@ async function checkPendingImage() {
     try {
         const response = await chrome.runtime.sendMessage({ type: 'GET_PENDING_IMAGE' });
         if (response?.imageUrl) {
-            state.clothingImage = response.imageUrl;
-            state.clothingSourceUrl = response.sourceUrl || null;
-            updateUI();
+            // Use toggleClothingSelection so the item appears in bubbles immediately
+            toggleClothingSelection({
+                id: `pending-${Date.now()}`,
+                imageUrl: response.imageUrl,
+                name: CATEGORY_LABELS[state.selectedCategory] || 'Captured Item',
+                category: state.selectedCategory,
+                sourceUrl: response.sourceUrl || null
+            });
 
             if (response.sourceUrl) {
                 showToast(t('image_from_context_with_link'), 'success');
@@ -890,6 +881,20 @@ function listenForStorageChanges() {
         if (changes.auth_token) {
             console.log('[Sidebar] Auth token changed, refreshing state...');
             checkAuthState();
+        }
+
+        // Selected items changed externally - refresh UI
+        if (changes.selectedItems) {
+            console.log('[Sidebar] Selected items changed, refreshing...');
+            const newItems = changes.selectedItems.newValue;
+            if (Array.isArray(newItems)) {
+                state.selectedItems = newItems;
+                if (newItems.length > 0) {
+                    state.clothingImage = newItems[newItems.length - 1].imageUrl;
+                    state.clothingSourceUrl = newItems[newItems.length - 1].sourceUrl;
+                }
+                updateUI();
+            }
         }
     });
 }
