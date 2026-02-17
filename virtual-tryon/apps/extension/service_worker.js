@@ -609,7 +609,11 @@ async function handleProcessTryOn(data) {
         }
 
         // Save to recent clothing
-        await handleSaveRecentClothing({ imageUrl: data.clothing_image });
+        await handleSaveRecentClothing({ 
+            imageUrl: data.clothing_image,
+            sourceUrl: data.source_url,
+            name: data.clothing_name
+        });
 
         // Return random result
         const resultUrl = MOCK_TRYON_RESULTS[Math.floor(Math.random() * MOCK_TRYON_RESULTS.length)];
@@ -632,7 +636,11 @@ async function handleProcessTryOn(data) {
 
         const result = await response.json();
         if (result.success) {
-            await handleSaveRecentClothing({ imageUrl: data.clothing_image });
+            await handleSaveRecentClothing({ 
+                imageUrl: data.clothing_image,
+                sourceUrl: data.source_url,
+                name: data.clothing_name
+            });
         }
         return result;
     } catch (error) {
@@ -895,15 +903,31 @@ async function handleSaveRecentClothing(data) {
         recentClothing = recentClothing.filter(item => item.imageUrl !== data.imageUrl);
         exists.timestamp = Date.now();
         exists.tryCount = (exists.tryCount || 1) + 1;
+        // Update name if not set
+        if (!exists.name && data.sourceUrl && !data.sourceUrl.startsWith('data:') && !data.sourceUrl.startsWith('blob:')) {
+             try {
+                const hostname = new URL(data.sourceUrl).hostname;
+                exists.name = hostname.replace('www.', '');
+            } catch (e) {}
+        }
         recentClothing.unshift(exists);
     } else {
         // Detect source type: data: hoặc blob: URL = local upload, http = online
         const isLocalUpload = data.imageUrl.startsWith('data:') || data.imageUrl.startsWith('blob:');
 
+        let name = data.name;
+        if (!name && data.sourceUrl && !data.sourceUrl.startsWith('data:') && !data.sourceUrl.startsWith('blob:')) {
+             try {
+                const hostname = new URL(data.sourceUrl).hostname;
+                name = hostname.replace('www.', '');
+            } catch (e) {}
+        }
+
         recentClothing.unshift({
             id: 'clothing-' + Date.now(),
             imageUrl: data.imageUrl,
             sourceUrl: data.sourceUrl,
+            name: name || 'Item',
             sourceType: data.sourceType || (isLocalUpload ? 'local_upload' : 'online'),
             cachedKey: data.cachedKey || null,
             timestamp: Date.now(),

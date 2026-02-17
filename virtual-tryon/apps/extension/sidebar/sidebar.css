@@ -2833,3 +2833,422 @@ h1, h2, h3, h4, h5, h6 {
 .sad-eyes text {
   font-family: monospace; /* Ensure consistent rendering */
 }
+
+/* Success & Error Overlay Styles */
+.success-actions,
+.error-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  justify-content: center;
+  width: 100%;
+}
+
+.success-title {
+  color: #4CAF50;
+}
+
+.error-title {
+  color: #F44336;
+}
+
+.success-message,
+.error-message {
+  font-size: 14px;
+  color: #5d4037;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+/* ===========================================
+   MIX & MATCH REDESIGN (Image 1)
+   =========================================== */
+
+/* Wrapper */
+.mix-match-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: transparent;
+}
+
+/* --- VISUAL CARD (Top) --- */
+.visual-card {
+  background: white;
+  border-radius: 32px;
+  padding: 24px;
+  box-shadow: 
+    0 20px 40px rgba(141, 110, 99, 0.08),
+    0 1px 2px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.visual-header {
+  font-family: var(--font-family-heading); /* Playfair Display */
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #5d4037;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+.visual-image-container {
+  width: 100%;
+  aspect-ratio: 4/5; /* Taller portrait aspect */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Placeholder */
+.visual-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #d7ccc8;
+}
+
+.placeholder-icon {
+  font-size: 48px;
+  color: #efebe9;
+}
+
+.visual-placeholder span {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Main Image */
+.visual-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+  transition: opacity 0.3s ease;
+}
+
+.visual-img.hidden {
+  display: none;
+}
+
+/* Floating Tags */
+.floating-tag {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  font-size: 12px;
+  font-weight: 600;
+  color: #5d4037;
+  display: none; /* Hidden by default */
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(4px);
+  animation: floatIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.visual-image-container.has-image .floating-tag {
+  display: flex; /* Show only when image is present */
+}
+
+.floating-tag.hidden {
+  display: none;
+}
+
+.tag-dot {
+  width: 8px;
+  height: 8px;
+  background: #8d6e63;
+  border-radius: 50%;
+}
+
+@keyframes floatIn {
+  from { opacity: 0; transform: scale(0.8) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Expand Button */
+.expand-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 1px solid #f5f5f5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8d6e63;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+}
+
+.expand-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+
+/* --- SELECTION SECTION (Bottom) --- */
+.selection-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header */
+.selection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selection-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.selection-icon {
+  font-size: 24px;
+  color: #8d6e63; /* Icon color */
+  margin-top: 2px;
+  transform: rotate(-15deg);
+}
+
+.selection-text h3 {
+  font-family: var(--font-family-body);
+  font-size: 16px;
+  font-weight: 700;
+  color: #3e2723;
+  margin-bottom: 2px;
+}
+
+.selection-text p {
+  font-size: 12px;
+  color: #9e9e9e;
+  font-weight: 500;
+}
+
+/* Tabs */
+.category-tabs {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.cat-tab {
+  background: none;
+  border: none;
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: #bdbdbd;
+  cursor: pointer;
+  padding: 8px 0;
+  position: relative;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.cat-tab.active {
+  color: #5d4037;
+}
+
+.cat-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; /* Align with border-bottom */
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #5d4037;
+  border-radius: 2px;
+}
+
+/* Carousel */
+.item-carousel {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 4px 4px 20px 4px; /* Space for shadow */
+  scroll-behavior: smooth;
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.item-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+/* Modify existing clothing-history-item for carousel */
+.item-carousel .clothing-history-item {
+  min-width: 100px;
+  width: 100px;
+  height: 130px; /* Taller for label */
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+  border: 2px solid transparent;
+  padding: 8px;
+  gap: 8px;
+}
+
+.item-carousel .clothing-history-item img {
+  width: 100%;
+  height: 80px; /* Reduced height for image */
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f5f5f5;
+}
+
+/* Selected state in carousel */
+.item-carousel .clothing-history-item.selected {
+  border-color: #8d6e63;
+  box-shadow: 0 8px 20px rgba(141, 110, 99, 0.15);
+}
+
+/* Checkmark Badge for selected */
+.item-carousel .clothing-history-item.selected::after {
+  content: 'check';
+  font-family: 'Material Symbols Outlined';
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  background: #8d6e63;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+/* Hide overlay in carousel mode to match design */
+.item-carousel .clothing-history-item .thumbnail-overlay {
+  display: none;
+}
+
+/* Label below image */
+.item-carousel .clothing-history-item .thumbnail-overlay {
+  /* Override to show below */
+  display: flex !important;
+  position: static;
+  background: none;
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+  height: auto;
+}
+
+.item-carousel .clothing-history-item .thumbnail-label {
+  color: #757575;
+  font-size: 11px;
+  text-shadow: none;
+  font-weight: 600;
+  text-transform: capitalize;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.item-carousel .clothing-history-item.selected .thumbnail-label {
+  color: #8d6e63; /* Brown when selected */
+}
+
+/* Hide extra controls in carousel mode for cleaner look */
+.item-carousel .clothing-history-item .status-dot,
+.item-carousel .clothing-history-item .clothing-item-actions,
+.item-carousel .clothing-history-item .clothing-quick-try,
+.item-carousel .clothing-history-item .clothing-try-count {
+  display: none !important;
+}
+
+/* Empty state in carousel */
+.item-carousel .clothing-history-empty {
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  color: #9e9e9e;
+  padding: 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Action Button (Pill) */
+.try-on-pill-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #8d6e63, #6d4c41);
+  color: white;
+  border: none;
+  border-radius: 32px;
+  font-family: var(--font-family-body);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(141, 110, 99, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.try-on-pill-btn:disabled {
+  background: #bdbdbd;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.try-on-pill-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(141, 110, 99, 0.4);
+}
+
+.try-count-badge {
+  background: white;
+  color: #6d4c41;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}

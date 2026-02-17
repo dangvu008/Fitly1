@@ -139,6 +139,11 @@ const elements = {
     errorRetryBtn: $('error-retry-btn'),
     errorCloseBtn: $('error-close-btn'),
 
+    // Success Overlay
+    successOverlay: $('success-overlay'),
+    successMessageText: $('success-message-text'),
+    successCloseBtn: $('success-close-btn'),
+
     // Recent clothing (will be added dynamically)
     recentClothingSection: null,
 };
@@ -287,52 +292,47 @@ function renderUserModels() {
         countEl.textContent = `${state.userModels.length}/10`;
     }
 
-    if (state.userModels.length === 0) {
-        grid.innerHTML = `
-            <div class="user-models-empty" style="grid-column: 1/-1;">
-                Chưa có ảnh nào. Tải ảnh lên hoặc thử đồ để lưu tự động.
-            </div>
-        `;
-        return;
-    }
+    let html = '';
 
-    grid.innerHTML = state.recentModels.map(item => {
+    // Render numbered items
+    html += state.userModels.map((item, index) => {
         const isSelected = state.modelImage === item.imageUrl;
-        const isDefault = item.isDefault;
-        const label = item.label || 'FRONT'; // Default label
+        // Use index + 1 as the number
+        const number = index + 1;
 
         return `
-            <div class="user-model-item ${isSelected ? 'selected' : ''} ${isDefault ? 'is-default' : ''}" 
+            <div class="user-model-item ${isSelected ? 'selected' : ''}" 
                  data-id="${item.id}" 
                  data-url="${item.imageUrl}"
-                 title="${item.label}${isDefault ? ' (Mặc định)' : ''}">
-                <img src="${item.imageUrl}" alt="${item.label}" loading="lazy">
+                 title="Ảnh ${number}">
+                 
+                <!-- Number Badge -->
+                <div class="number-badge">${number}</div>
                 
-                <!-- Overlay with Text -->
-                <div class="thumbnail-overlay">
-                    <span class="thumbnail-label">${label}</span>
+                ${isSelected ? `
+                <!-- Check Badge -->
+                <div class="check-badge">
+                    <span class="material-symbols-outlined">check</span>
                 </div>
-
-                <!-- Status Dot -->
-                <div class="status-dot"></div>
-
-                <div class="model-item-actions">
-                    ${!isDefault ? `
-                        <button class="model-action-btn default-btn" data-action="set-default" title="Đặt mặc định">★</button>
-                    ` : ''}
-                    <button class="model-action-btn delete-btn" data-action="delete" title="Xóa">×</button>
-                </div>
+                ` : ''}
+                
+                <img src="${item.imageUrl}" alt="Model ${number}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
             </div>
         `;
     }).join('');
 
+    // Add "+" Button Card
+    html += `
+        <div class="add-model-card" id="add-model-btn-card" title="Thêm ảnh mới">
+            <span class="material-symbols-outlined">add</span>
+        </div>
+    `;
+
+    grid.innerHTML = html;
+
     // Add click handlers
     grid.querySelectorAll('.user-model-item').forEach(item => {
-        // Select model on click
-        item.addEventListener('click', (e) => {
-            // Don't trigger if clicking action buttons
-            if (e.target.closest('.model-item-actions')) return;
-
+        item.addEventListener('click', () => {
             const id = item.dataset.id;
             const url = item.dataset.url;
 
@@ -340,28 +340,18 @@ function renderUserModels() {
             state.selectedModelId = id;
 
             // Update selected state visually
-            grid.querySelectorAll('.user-model-item').forEach(i => i.classList.remove('selected'));
-            item.classList.add('selected');
-
-            updateUI();
-            showToast(t('photo_selected'), 'success');
-        });
-
-        // Handle action buttons
-        item.querySelectorAll('.model-action-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const action = btn.dataset.action;
-                const modelId = item.dataset.id;
-
-                if (action === 'delete') {
-                    await deleteUserModel(modelId);
-                } else if (action === 'set-default') {
-                    await setDefaultModel(modelId);
-                }
-            });
+            renderUserModels(); // Re-render to update badges
+            updateUI(); // Update main preview
         });
     });
+
+    // Add handler for + button
+    const addBtn = document.getElementById('add-model-btn-card');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            document.getElementById('model-upload-input').click();
+        });
+    }
 }
 
 async function addUserModel(imageUrl, source = 'upload') {
@@ -585,7 +575,7 @@ function renderClothingHistory() {
         const isLocalUpload = item.sourceType === 'local_upload';
         
         // Determine label (FRONT/SIDE/etc) based on analysis or random for demo
-        const poseLabel = item.pose || 'FRONT';
+        const poseLabel = item.name || item.pose || 'FRONT';
 
         return `
             <div class="clothing-history-item ${isSelected ? 'selected' : ''} ${isSaved ? 'saved' : ''} ${hasSourceUrl ? 'has-source' : ''}" 
@@ -911,15 +901,22 @@ function updateUI() {
 
 
     // Update model image preview
+    const deleteBtn = document.getElementById('delete-model-btn');
     if (state.modelImage && elements.modelImage) {
         elements.modelImage.src = state.modelImage;
         elements.modelImage.classList.remove('hidden');
         elements.modelPlaceholder?.classList.add('hidden');
         elements.modelImageContainer?.classList.add('has-image');
+        
+        // Show delete button
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
     } else if (elements.modelImage) {
         elements.modelImage.classList.add('hidden');
         elements.modelPlaceholder?.classList.remove('hidden');
         elements.modelImageContainer?.classList.remove('has-image');
+        
+        // Hide delete button
+        if (deleteBtn) deleteBtn.classList.add('hidden');
     }
 
     // Update selected state in user models grid
@@ -1270,7 +1267,13 @@ function addResult(imageUrl, clothingUrl, modelUrl, sourceUrl = null) {
 
     // Also open popup for easy comparison (outside extension)
     // Multiple popups can be opened side-by-side for outfit comparison
-    openResultPopup(result.id);
+    // openResultPopup(result.id);
+    showSuccessOverlay(true, 'Thử đồ thành công! ✨');
+    
+    // Auto hide success overlay after 2 seconds
+    setTimeout(() => {
+        showSuccessOverlay(false);
+    }, 2000);
 
     // Update thumbnails
     updateGalleryUI();
@@ -1876,6 +1879,8 @@ async function saveResultOutfit(result) {
 
         if (response.success) {
             showToast(t('outfit_saved'), 'success');
+            // Refresh outfits list
+            renderCreatedOutfitsList();
         } else {
             showToast(t('outfit_save_error') + ': ' + (response.error || 'Unknown'), 'error');
         }
@@ -1974,6 +1979,16 @@ function showErrorOverlay(show, message = null) {
     }
 }
 
+function showSuccessOverlay(show, message = null) {
+    if (elements.successOverlay) {
+        elements.successOverlay.classList.toggle('hidden', !show);
+        
+        if (show && message && elements.successMessageText) {
+            elements.successMessageText.textContent = message;
+        }
+    }
+}
+
 function showToast(message, type = 'info') {
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
@@ -2062,6 +2077,10 @@ function setupEventListeners() {
 
     elements.errorCloseBtn?.addEventListener('click', () => {
         showErrorOverlay(false);
+    });
+
+    elements.successCloseBtn?.addEventListener('click', () => {
+        showSuccessOverlay(false);
     });
 
     // Login with Google - opens popup window (không dùng overlay vì hay bị CSP block)
@@ -2234,9 +2253,25 @@ function setupEventListeners() {
 
 
     // Model image container click - open upload if no image
-    elements.modelImageContainer?.addEventListener('click', () => {
+    elements.modelImageContainer?.addEventListener('click', (e) => {
+        // Prevent click if clicking delete button
+        if (e.target.closest('#delete-model-btn')) return;
+
         if (!state.modelImage) {
             elements.modelUploadInput?.click();
+        }
+    });
+
+    // Delete model button
+    const deleteModelBtn = document.getElementById('delete-model-btn');
+    deleteModelBtn?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (state.selectedModelId) {
+            await deleteUserModel(state.selectedModelId);
+        } else {
+            // Just clear current view if no ID
+            state.modelImage = null;
+            updateUI();
         }
     });
 
@@ -3194,6 +3229,7 @@ async function processTryOn(event) {
             data: {
                 person_image: state.modelImage,
                 clothing_image: state.clothingImage,
+                source_url: state.clothingSourceUrl,
                 quality: 'standard',
                 use_mock: useMock
             }
@@ -3251,7 +3287,7 @@ async function processTryOn(event) {
             await loadRecentClothing();
 
             updateUI();
-            showToast(t('tryon_success_popup'), 'success');
+            // showToast(t('tryon_success_popup'), 'success');
         } else {
             const errorMessage = response.error || t('error_occurred');
             console.error('Try-on failed:', errorMessage);
@@ -3355,9 +3391,15 @@ function listenForMessages() {
 function toggleGemsPanel() {
     const gemsPanel = document.getElementById('gems-panel');
     const languagePanel = document.getElementById('language-panel');
+    const profileMenu = document.getElementById('profile-menu');
 
-    // Close language panel if open
-    languagePanel?.classList.add('hidden');
+    // Close other panels
+    if (languagePanel && !languagePanel.classList.contains('hidden')) {
+        hideLanguagePanel();
+    }
+    if (profileMenu && !profileMenu.classList.contains('hidden')) {
+        hideProfileMenu();
+    }
 
     if (gemsPanel?.classList.contains('hidden')) {
         showGemsPanel();
@@ -3402,9 +3444,15 @@ async function purchaseGems(packageId) {
 function toggleLanguagePanel() {
     const languagePanel = document.getElementById('language-panel');
     const gemsPanel = document.getElementById('gems-panel');
+    const profileMenu = document.getElementById('profile-menu');
 
-    // Close gems panel if open
-    gemsPanel?.classList.add('hidden');
+    // Close other panels
+    if (gemsPanel && !gemsPanel.classList.contains('hidden')) {
+        hideGemsPanel();
+    }
+    if (profileMenu && !profileMenu.classList.contains('hidden')) {
+        hideProfileMenu();
+    }
 
     if (languagePanel?.classList.contains('hidden')) {
         showLanguagePanel();
@@ -3543,15 +3591,15 @@ function updateUIStrings() {
         const svg = yourPhotoSectionHeaders[1].querySelector('svg');
         yourPhotoSectionHeaders[1].innerHTML = '';
         if (svg) yourPhotoSectionHeaders[1].appendChild(svg);
-        yourPhotoSectionHeaders[1].appendChild(document.createTextNode(' ' + t('clothing')));
+        yourPhotoSectionHeaders[1].appendChild(document.createTextNode(' ' + t('try_on_result')));
     }
 
-    // Results section header
+    // Recent Clothing section header (Previously mistitled as Results)
     if (yourPhotoSectionHeaders[2]) {
         const svg = yourPhotoSectionHeaders[2].querySelector('svg');
         yourPhotoSectionHeaders[2].innerHTML = '';
         if (svg) yourPhotoSectionHeaders[2].appendChild(svg);
-        yourPhotoSectionHeaders[2].appendChild(document.createTextNode(' ' + t('results')));
+        yourPhotoSectionHeaders[2].appendChild(document.createTextNode(' ' + t('recent_clothing')));
     }
 
     // =====================================
@@ -3852,7 +3900,18 @@ async function cacheLocalUploadImages() {
 
 function toggleProfileMenu() {
     const menu = document.getElementById('profile-menu');
+    const gemsPanel = document.getElementById('gems-panel');
+    const languagePanel = document.getElementById('language-panel');
+    
     if (!menu) return;
+
+    // Close other panels
+    if (gemsPanel && !gemsPanel.classList.contains('hidden')) {
+        hideGemsPanel();
+    }
+    if (languagePanel && !languagePanel.classList.contains('hidden')) {
+        hideLanguagePanel();
+    }
 
     const isHidden = menu.classList.contains('hidden');
 
@@ -3866,8 +3925,7 @@ function toggleProfileMenu() {
             document.addEventListener('click', closeProfileMenuOnOutsideClick);
         }, 10);
     } else {
-        menu.classList.add('hidden');
-        document.removeEventListener('click', closeProfileMenuOnOutsideClick);
+        hideProfileMenu();
     }
 }
 
@@ -4012,3 +4070,56 @@ initProfileMenuEvents();
 if (window.imageCache) {
     window.imageCache.cleanupExpiredCache();
 }
+
+// ==========================================
+// CREATED OUTFITS LIST
+// ==========================================
+
+async function renderCreatedOutfitsList() {
+    const listContainer = document.getElementById('created-outfits-list');
+    const section = document.getElementById('created-outfits-list-section');
+    
+    if (!listContainer || !section) return;
+
+    try {
+        // Get outfits from service worker
+        const response = await chrome.runtime.sendMessage({ type: 'GET_OUTFITS', data: { limit: 12 } });
+        
+        if (response && response.success && response.outfits && response.outfits.length > 0) {
+            section.classList.remove('hidden');
+            listContainer.innerHTML = '';
+            
+            response.outfits.forEach(outfit => {
+                const itemWrapper = document.createElement('div');
+                itemWrapper.className = 'image-container has-image';
+                itemWrapper.style.cursor = 'pointer';
+                itemWrapper.title = outfit.name || 'Outfit';
+                
+                const img = document.createElement('img');
+                img.src = outfit.result_image_url;
+                img.className = 'preview-image';
+                img.alt = outfit.name;
+                
+                itemWrapper.appendChild(img);
+                
+                // Click to view
+                itemWrapper.onclick = () => {
+                    showResultInline({
+                        imageUrl: outfit.result_image_url,
+                        id: outfit.id,
+                        name: outfit.name
+                    });
+                };
+                
+                listContainer.appendChild(itemWrapper);
+            });
+        } else {
+            section.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Error rendering created outfits:', error);
+    }
+}
+
+// Initial render
+renderCreatedOutfitsList();

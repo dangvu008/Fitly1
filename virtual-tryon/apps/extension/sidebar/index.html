@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
-    <link rel="stylesheet" href="sidebar.css">
+    <link rel="stylesheet" href="sidebar.css?v=3">
 </head>
 
 <body>
@@ -331,12 +331,13 @@
             <section class="section">
                 <div class="section-header">
                     <h3>
-                        <span class="material-icons-round">person</span>
-                        Ảnh của bạn
+                        Ảnh mẫu toàn thân
                     </h3>
-                    <!-- Removed upload button as requested -->
+                    <button class="icon-btn-plain">
+                        <span class="material-symbols-outlined">more_horiz</span>
+                    </button>
                 </div>
-                <div id="model-image-container" class="image-container model-container">
+                <div id="model-image-container" class="image-container model-container dashed-border">
                     <div id="model-placeholder" class="placeholder empty-state minimal">
                         <div class="empty-icon-circle minimal">
                             <span class="material-symbols-outlined">add_a_photo</span>
@@ -344,77 +345,92 @@
                         <span class="empty-label">THÊM ẢNH</span>
                         <span class="empty-instruction">Ảnh toàn thân</span>
                     </div>
-                    <img id="model-image" class="preview-image hidden" alt="Model">
+                    <div class="image-wrapper relative full-width full-height">
+                        <img id="model-image" class="preview-image hidden" alt="Model">
+                        <button id="delete-model-btn" class="delete-fab hidden">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
+                    </div>
                 </div>
                 <input type="file" id="model-upload-input" accept="image/*" hidden>
 
                 <!-- User's Model Images Gallery -->
                 <div id="user-models-section" class="user-models-section">
                     <div class="user-models-header">
-                        <p class="sample-label">Ảnh đã lưu:</p>
+                        <p class="sample-label">LỊCH SỬ TẢI LÊN</p>
                         <span id="models-count" class="models-count">0/10</span>
                     </div>
                     <div class="user-models-grid" id="user-models-grid">
                         <!-- User models will be rendered here -->
                     </div>
-
                 </div>
             </section>
 
-            <!-- Product Section -->
-            <section class="section">
-                <div class="section-header">
-                    <h3>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path
-                                d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z" />
-                        </svg>
-                        Quần áo
-                    </h3>
-                    <button id="paste-url-btn" class="section-action">Dán URL</button>
-                </div>
-                <div id="clothing-image-container" class="image-container">
-                    <div id="clothing-placeholder" class="placeholder empty-state">
-                        <div class="empty-icon-circle">
-                            <span class="material-symbols-outlined">checkroom</span>
+            <!-- Mix Match Section (New Design) -->
+            <section class="mix-match-wrapper">
+                
+                <!-- Top Card: Visual 2D (Replaces Product Section) -->
+                <div class="visual-card">
+                    <div class="visual-header">Item đã chọn</div>
+                    
+                    <div id="clothing-image-container" class="visual-image-container">
+                        <!-- Placeholder -->
+                        <div id="clothing-placeholder" class="visual-placeholder">
+                            <i class="material-symbols-outlined placeholder-icon">checkroom</i>
+                            <span>Chưa chọn đồ</span>
                         </div>
-                        <div class="empty-text">
-                            <span class="empty-title">Chưa có quần áo</span>
-                            <span class="empty-subtitle">Chuột phải vào ảnh bất kỳ<br>trên web để thử đồ</span>
+                        
+                        <!-- Image -->
+                        <img id="clothing-image" class="visual-img hidden" alt="Clothing">
+
+                        <!-- Floating Mock Tags (Only visible when image is loaded - handled by CSS/JS?) -->
+                        <div class="floating-tag tag-left hidden" id="tag-top">
+                            <span class="tag-dot"></span> Áo Polo
                         </div>
-                    </div>
-                    <img id="clothing-image" class="preview-image hidden" alt="Clothing">
-                </div>
+                         <div class="floating-tag tag-right hidden" id="tag-bottom">
+                            <span class="tag-dot"></span> Quần Tây
+                        </div>
 
-            </section>
-
-            <!-- Try On Button -->
-            <section class="try-on-section">
-                <button id="try-on-btn" class="try-on-btn" disabled>
-                    ✨ Thử đồ ngay
-                    <span class="gem-cost">(2 💎)</span>
-                </button>
-            </section>
-
-            <!-- Clothing History Section - Quần áo đã thử -->
-            <section id="clothing-history-section" class="section clothing-history-section">
-                <div class="section-header">
-                    <h3>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path
-                                d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z" />
-                        </svg>
-                        Đã thử gần đây
-                    </h3>
-                    <div class="result-controls">
-                        <button id="clear-clothing-history" class="clear-btn" title="Xóa tất cả">
-                            <span class="material-symbols-outlined">delete</span>
-                            <span>XÓA HẾT</span>
+                        <!-- Expand Button -->
+                        <button class="expand-btn">
+                            <span class="material-symbols-outlined">fullscreen</span>
                         </button>
                     </div>
                 </div>
-                <div class="clothing-history-grid" id="clothing-history-grid">
-                    <!-- Clothing history will be rendered here -->
+
+                <!-- Bottom Section: Selection (Replaces History) -->
+                <div class="selection-section" id="clothing-history-section"> <!-- Retain ID for JS -->
+                    
+                    <div class="selection-header">
+                        <div class="selection-title-group">
+                            <span class="material-symbols-outlined selection-icon">style</span>
+                            <div class="selection-text">
+                                <h3>Chọn đồ phối</h3>
+                                <p>Chọn 1 món từ mỗi danh mục để thử đồ</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="category-tabs">
+                        <button class="cat-tab active">Áo</button>
+                        <button class="cat-tab">Quần</button>
+                        <button class="cat-tab">Váy</button>
+                        <button class="cat-tab">Giày</button>
+                        <button class="cat-tab">Phụ kiện</button>
+                    </div>
+
+                    <!-- Carousel (Reusing Grid ID) -->
+                    <div id="clothing-history-grid" class="item-carousel">
+                        <!-- JS injects items here -->
+                    </div>
+
+                    <!-- Action Button -->
+                    <button id="try-on-btn" class="try-on-pill-btn" disabled>
+                        <div class="try-count-badge">2</div>
+                        Thử 2 món đồ ngay
+                    </button>
+
                 </div>
             </section>
 
@@ -481,6 +497,19 @@
                     <button id="report-wrong-btn" class="report-wrong-btn">
                         Ảnh sai? Hoàn gem 💎
                     </button>
+                </div>
+            </section>
+
+            <!-- Created Outfits List -->
+            <section id="created-outfits-list-section" class="section created-outfits-section hidden">
+                 <div class="section-header">
+                    <h3>
+                        <span class="material-symbols-outlined">style</span>
+                        Outfit đã tạo
+                    </h3>
+                </div>
+                <div id="created-outfits-list" class="user-models-grid">
+                    <!-- Outfits injected by JS -->
                 </div>
             </section>
 
@@ -709,6 +738,85 @@
                     
                     <p id="loading-progress-text" class="anime-percent">0%</p>
                     <p id="loading-tip" class="anime-tip">💡 AI đang thử đồ cho bạn đó!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Overlay - Anime Style -->
+        <div id="success-overlay" class="loading-overlay hidden">
+            <div class="loading-content-wrapper success-wrapper">
+                <!-- Anime Character SVG (Happy/Celebratory) -->
+                <div class="anime-mascot">
+                    <svg viewBox="0 0 200 200" class="chibi-character">
+                        <defs>
+                            <filter id="glowSuccess" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                            <linearGradient id="hairGradSuccess" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#FFD1DC" />
+                                <stop offset="100%" stop-color="#FF9EAA" />
+                            </linearGradient>
+                            <linearGradient id="dressGradSuccess" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#E0F7FA" />
+                                <stop offset="100%" stop-color="#B2EBF2" />
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- Glow effect behind -->
+                        <circle cx="100" cy="100" r="70" fill="rgba(255, 255, 255, 0.6)" filter="url(#glowSuccess)" class="mascot-glow" />
+
+                        <!-- Body (Dancing/Happy Pose) -->
+                        <path d="M85 130 Q100 135 115 130 L135 170 Q100 190 65 170 Z" fill="url(#dressGradSuccess)" />
+                        
+                        <!-- Head -->
+                        <circle cx="100" cy="90" r="45" fill="#FFE0BD" />
+                        
+                        <!-- Hair (Back) -->
+                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z" fill="url(#hairGradSuccess)" />
+                        
+                        <!-- Face (Happy Expression) -->
+                        <!-- Eyes (Closed Happy ^ ^) -->
+                        <path d="M75 95 Q82 85 89 95" fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" />
+                        <path d="M111 95 Q118 85 125 95" fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" />
+                        
+                        <!-- Blush -->
+                        <ellipse cx="75" cy="105" rx="6" ry="4" fill="#FFAB91" opacity="0.6" />
+                        <ellipse cx="125" cy="105" rx="6" ry="4" fill="#FFAB91" opacity="0.6" />
+
+                        <!-- Mouth (Big Smile) -->
+                        <path d="M90 110 Q100 120 110 110" fill="none" stroke="#A1887F" stroke-width="2" stroke-linecap="round" />
+                        
+                        <!-- Hair (Bangs) -->
+                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90" fill="url(#hairGradSuccess)" />
+                        
+                        <!-- V Sign Hand -->
+                        <g transform="translate(135, 110) rotate(-20)">
+                            <path d="M0 0 L5 -15 L10 0 L15 -15 L20 0 L10 20 Z" fill="#FFE0BD" />
+                        </g>
+
+                        <!-- Sparkles/Hearts -->
+                        <g class="sparkles-group">
+                            <text x="140" y="70" font-size="24" fill="#FF4081" class="sparkle-1">♥</text>
+                            <text x="50" y="80" font-size="20" fill="#FFD700" class="sparkle-2">✨</text>
+                            <text x="160" y="130" font-size="18" fill="#FF8A80" class="sparkle-3">✨</text>
+                        </g>
+                    </svg>
+                </div>
+
+                <!-- Success Text -->
+                <div class="loading-info">
+                    <h3 class="anime-title success-title">Thành công! ✨</h3>
+                    
+                    <p id="success-message-text" class="anime-tip success-message">
+                        Outfit này trông tuyệt vời!
+                    </p>
+
+                    <div class="success-actions">
+                        <button id="success-close-btn" class="btn btn-primary btn-sm">
+                            Xem kết quả
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
