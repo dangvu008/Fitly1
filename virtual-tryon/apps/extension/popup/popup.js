@@ -1,11 +1,15 @@
 /**
  * File: popup.js
- * Purpose: Popup logic - show auth state and quick actions
+ * Purpose: Popup logic - show auth state, quick actions, and profile dropdown menu
+ * 
+ * Input: Auth state from service worker
+ * Output: Rendered popup UI with dropdown menu khi click avatar
  * 
  * Flow:
- * 1. Check auth state
- * 2. Show appropriate section
- * 3. Handle quick actions
+ * 1. Check auth state via service worker
+ * 2. Show auth section (login) hoặc main section (logged in)
+ * 3. Toggle dropdown menu khi click vào user-info
+ * 4. Handle menu item actions (sidebar, wardrobe, web app, gems, logout)
  */
 
 // State
@@ -29,8 +33,18 @@ const elements = {
     openSidebar: $('open-sidebar'),
     selectImage: $('select-image'),
     viewWardrobe: $('view-wardrobe'),
-    logoutBtn: $('logout-btn'),
     openWeb: $('open-web'),
+    // Dropdown menu elements
+    userInfo: $('user-info'),
+    profileMenu: $('profile-menu'),
+    menuAvatar: $('menu-avatar'),
+    menuUsername: $('menu-username'),
+    menuEmail: $('menu-email'),
+    menuOpenSidebar: $('menu-open-sidebar'),
+    menuWardrobe: $('menu-wardrobe'),
+    menuWebapp: $('menu-webapp'),
+    menuCredits: $('menu-credits'),
+    menuLogout: $('menu-logout'),
 };
 
 // ==========================================
@@ -69,16 +83,14 @@ function showAuthSection() {
     elements.authSection?.classList.remove('hidden');
     elements.mainSection?.classList.add('hidden');
     elements.gemsBadge?.classList.add('hidden');
-    elements.logoutBtn?.classList.add('hidden');
 }
 
 function showMainSection() {
     elements.authSection?.classList.add('hidden');
     elements.mainSection?.classList.remove('hidden');
     elements.gemsBadge?.classList.remove('hidden');
-    elements.logoutBtn?.classList.remove('hidden');
 
-    // Update user info
+    // Update user info in header bar
     const displayName = state.profile?.full_name || state.profile?.display_name || 'User';
     if (elements.userName) {
         elements.userName.textContent = displayName;
@@ -92,18 +104,55 @@ function showMainSection() {
 
     // Update avatar with fallback logic
     const avatarEl = document.querySelector('.user-avatar');
-    if (avatarEl) {
-        const avatarUrl = state.profile?.avatar_url || state.user?.user_metadata?.avatar_url;
-        const initial = displayName.charAt(0).toUpperCase();
+    const avatarUrl = state.profile?.avatar_url || state.user?.user_metadata?.avatar_url;
+    const initial = displayName.charAt(0).toUpperCase();
 
+    if (avatarEl) {
         if (avatarUrl) {
-            // Show avatar image
             avatarEl.innerHTML = `<img src="${avatarUrl}" alt="Avatar" class="avatar-img" />`;
         } else {
-            // Show fallback: initial letter in gradient circle
             avatarEl.innerHTML = `<div class="avatar-initial">${initial}</div>`;
         }
     }
+
+    // Update dropdown menu header info
+    if (elements.menuUsername) {
+        elements.menuUsername.textContent = displayName;
+    }
+    if (elements.menuEmail) {
+        elements.menuEmail.textContent = state.user?.email || '';
+    }
+    if (elements.menuAvatar) {
+        if (avatarUrl) {
+            elements.menuAvatar.innerHTML = `<img src="${avatarUrl}" alt="Avatar" />`;
+        } else {
+            elements.menuAvatar.innerHTML = `<div class="avatar-initial">${initial}</div>`;
+        }
+    }
+}
+
+// ==========================================
+// DROPDOWN MENU TOGGLE
+// ==========================================
+
+function toggleProfileMenu() {
+    const menu = elements.profileMenu;
+    const wrapper = document.querySelector('.profile-wrapper');
+    if (!menu || !wrapper) return;
+
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        wrapper.classList.add('menu-open');
+    } else {
+        menu.classList.add('hidden');
+        wrapper.classList.remove('menu-open');
+    }
+}
+
+function closeProfileMenu() {
+    elements.profileMenu?.classList.add('hidden');
+    document.querySelector('.profile-wrapper')?.classList.remove('menu-open');
 }
 
 // ==========================================
@@ -111,15 +160,14 @@ function showMainSection() {
 // ==========================================
 
 function setupEventListeners() {
-    // Login button - opens login popup (not a new tab)
+    // Login button - opens login popup
     elements.loginBtn?.addEventListener('click', async () => {
-        // Get server URL from service worker
         let serverUrl;
         try {
             const response = await chrome.runtime.sendMessage({ type: 'GET_SERVER_URL' });
             serverUrl = response.url;
         } catch (error) {
-            serverUrl = 'http://localhost:3000'; // Fallback
+            serverUrl = 'http://localhost:3000';
         }
 
         try {
@@ -130,12 +178,9 @@ function setupEventListeners() {
             }).catch(() => null);
         } catch (error) { }
 
-        // Open popup window for login - compact size
         const popupUrl = `${serverUrl}/auth/popup`;
         const popupWidth = 400;
         const popupHeight = 600;
-
-        // Center the popup
         const left = Math.round((screen.width - popupWidth) / 2);
         const top = Math.round((screen.height - popupHeight) / 2);
 
@@ -149,7 +194,6 @@ function setupEventListeners() {
                 top: top,
                 focused: true
             });
-
             window.close();
         } catch (error) {
             console.error('Failed to open popup, falling back to tab:', error);
@@ -157,6 +201,67 @@ function setupEventListeners() {
             window.close();
         }
     });
+
+    // ==========================================
+    // DROPDOWN MENU - Toggle & Close
+    // ==========================================
+
+    // Click user-info to toggle dropdown
+    elements.userInfo?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleProfileMenu();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const menu = elements.profileMenu;
+        const userInfo = elements.userInfo;
+        if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !userInfo?.contains(e.target)) {
+            closeProfileMenu();
+        }
+    });
+
+    // ==========================================
+    // DROPDOWN MENU ITEM ACTIONS
+    // ==========================================
+
+    // Menu: Open Sidebar
+    elements.menuOpenSidebar?.addEventListener('click', async () => {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab) {
+            await chrome.sidePanel.open({ tabId: tab.id });
+        }
+        window.close();
+    });
+
+    // Menu: Wardrobe
+    elements.menuWardrobe?.addEventListener('click', () => {
+        chrome.tabs.create({ url: 'http://localhost:3000/wardrobe' });
+        window.close();
+    });
+
+    // Menu: Web App
+    elements.menuWebapp?.addEventListener('click', () => {
+        chrome.tabs.create({ url: 'http://localhost:3000' });
+        window.close();
+    });
+
+    // Menu: Buy Gems
+    elements.menuCredits?.addEventListener('click', () => {
+        chrome.tabs.create({ url: 'http://localhost:3000/profile' });
+        window.close();
+    });
+
+    // Menu: Logout
+    elements.menuLogout?.addEventListener('click', async () => {
+        await chrome.runtime.sendMessage({ type: 'LOGOUT' });
+        closeProfileMenu();
+        showAuthSection();
+    });
+
+    // ==========================================
+    // QUICK ACTION BUTTONS
+    // ==========================================
 
     // Open sidebar
     elements.openSidebar?.addEventListener('click', async () => {
@@ -171,10 +276,7 @@ function setupEventListeners() {
     elements.selectImage?.addEventListener('click', async () => {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab) {
-            // Open sidebar first
             await chrome.sidePanel.open({ tabId: tab.id });
-
-            // Then trigger image selection
             try {
                 await chrome.tabs.sendMessage(tab.id, { type: 'START_IMAGE_SELECTION' });
             } catch (error) {
@@ -190,13 +292,7 @@ function setupEventListeners() {
         window.close();
     });
 
-    // Logout
-    elements.logoutBtn?.addEventListener('click', async () => {
-        await chrome.runtime.sendMessage({ type: 'LOGOUT' });
-        showAuthSection();
-    });
-
-    // Open web app
+    // Open web app (footer link)
     elements.openWeb?.addEventListener('click', (e) => {
         e.preventDefault();
         chrome.tabs.create({ url: 'http://localhost:3000' });
@@ -226,3 +322,4 @@ chrome.runtime.onMessage.addListener((message) => {
 // ==========================================
 
 init();
+

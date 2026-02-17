@@ -5,62 +5,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fitly - Virtual Try-On</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <link rel="stylesheet" href="sidebar.css">
 </head>
 
 <body>
     <div id="app">
-        <!-- Header - Instagram Style -->
+        <!-- Header - Compact Minimalist -->
         <header class="header">
             <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
                 <span class="logo-text">Fitly</span>
             </div>
+            
             <div class="header-actions">
-                <button id="language-btn" class="lang-btn" title="Ngôn ngữ">
-                    🌐
+                <!-- Compact Gems Display -->
+                <button id="gems-display" class="gems-badge compact" title="Mua thêm gems">
+                    <span class="material-symbols-outlined gem-icon">diamond</span>
+                    <span id="gems-count" class="gem-count">49</span>
                 </button>
-                <button id="gems-display" class="gems-badge" title="Mua thêm gems">
-                    <span class="gem-icon">💎</span>
-                    <span id="gems-count" class="gem-count">0</span>
-                </button>
+
+                <!-- Profile Trigger - Avatar + Text -->
                 <div class="profile-wrapper">
-                    <button id="profile-btn" class="profile-btn" title="Tài khoản">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="8" r="4" />
-                            <path d="M20 21a8 8 0 00-16 0" />
-                        </svg>
+                    <button id="profile-btn" class="profile-trigger" title="Tài khoản">
+                        <!-- Content injected by JS -->
                     </button>
-                    <!-- Profile Dropdown Menu -->
+                    
+                    <!-- Expanded Profile Dropdown Menu -->
                     <div id="profile-menu" class="profile-dropdown hidden">
-                        <div class="profile-menu-header">
-                            <div id="menu-avatar" class="menu-avatar-circle"></div>
+                        <!-- User Info Header -->
+                        <div class="menu-header">
+                            <div class="menu-avatar-large" id="menu-avatar">
+                                <!-- Avatar injected by JS -->
+                            </div>
                             <div class="menu-user-info">
-                                <span id="menu-username" class="menu-username">User</span>
-                                <span id="menu-email" class="menu-email">email@example.com</span>
+                                <p id="menu-username" class="menu-username">Guest User</p>
+                                <p id="menu-email" class="menu-email">Sign in to sync</p>
                             </div>
                         </div>
-                        <div class="profile-menu-divider"></div>
+                        
                         <div class="profile-menu-items">
-                            <button class="profile-menu-item" id="menu-webapp">
-                                <span class="menu-icon">🌐</span>
-                                <span class="menu-item-text">Mở Fitly Web</span>
+                            <!-- Language -->
+                            <button class="profile-menu-item" id="menu-language">
+                                <span class="material-symbols-outlined menu-icon">language</span>
+                                <span class="menu-item-text">Ngôn ngữ / Language</span>
+                                <span id="current-lang-code" class="menu-item-value">VI</span>
                             </button>
+
+                            <div class="profile-menu-spacer"></div>
+
+                            <!-- Wardrobe -->
                             <button class="profile-menu-item" id="menu-wardrobe">
-                                <span class="menu-icon">📦</span>
+                                <span class="material-symbols-outlined menu-icon">checkroom</span>
                                 <span class="menu-item-text">Tủ đồ của tôi</span>
                             </button>
-                            <button class="profile-menu-item" id="menu-cache-settings">
-                                <span class="menu-icon">💾</span>
-                                <span class="menu-item-text">Quản lý bộ nhớ</span>
-                                <span id="menu-cache-size" class="menu-badge">0 MB</span>
+
+                            <!-- Gallery -->
+                            <button class="profile-menu-item" id="menu-gallery">
+                                <span class="material-symbols-outlined menu-icon">collections</span>
+                                <span class="menu-item-text">Bộ sưu tập</span>
                             </button>
+
+                            <!-- Web App -->
+                            <button class="profile-menu-item" id="menu-webapp">
+                                <span class="material-symbols-outlined menu-icon">open_in_new</span>
+                                <span class="menu-item-text">Mở Web App</span>
+                            </button>
+
+                            <!-- Buy Gems Shortcut -->
+                            <button class="profile-menu-item" id="menu-credits">
+                                <span class="material-symbols-outlined menu-icon">diamond</span>
+                                <span class="menu-item-text">Mua thêm Gems</span>
+                            </button>
+                            
+                            <div class="profile-menu-spacer"></div>
+
+                            <!-- Cache Settings -->
+                            <button class="profile-menu-item" id="menu-cache-settings">
+                                <span class="material-symbols-outlined menu-icon">cleaning_services</span>
+                                <span class="menu-item-text">Xóa Cache</span>
+                                <span id="menu-cache-size" class="menu-item-value">0 MB</span>
+                            </button>
+                            
+                            <!-- Help -->
                             <button class="profile-menu-item" id="menu-help">
-                                <span class="menu-icon">❓</span>
+                                <span class="material-symbols-outlined menu-icon">help</span>
                                 <span class="menu-item-text">Trợ giúp</span>
                             </button>
-                            <div class="profile-menu-divider"></div>
-                            <button class="profile-menu-item danger" id="menu-logout">
-                                <span class="menu-icon">🚪</span>
+
+                            <div class="profile-menu-spacer"></div>
+
+                            <!-- Logout -->
+                            <button class="profile-menu-item text-danger" id="menu-logout">
+                                <span class="material-symbols-outlined menu-icon">logout</span>
                                 <span class="menu-item-text">Đăng xuất</span>
                             </button>
                         </div>
@@ -72,38 +118,57 @@
         <!-- Gems Purchase Panel (hidden by default) -->
         <section id="gems-panel" class="gems-panel hidden">
             <div class="gems-panel-header">
-                <h3>💎 Mua Gems</h3>
-                <button id="close-gems-panel" class="close-btn">×</button>
+                <h3>
+                    <span class="material-symbols-outlined" style="color: #29b6f6;">diamond</span>
+                    Mua Gems
+                </h3>
+                <button id="close-gems-panel" class="close-btn">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
             </div>
-            <p class="gems-panel-subtitle">Số dư: <span id="gems-panel-balance">0</span> gems</p>
+            <p class="gems-panel-subtitle">
+                Số dư: <span id="gems-panel-balance">0</span> 
+                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: text-bottom; color: #29b6f6;">diamond</span>
+            </p>
 
             <div class="gem-packages">
+                <!-- Starter -->
                 <button class="gem-package" data-package="starter">
-                    <div class="package-icon">⚡</div>
-                    <div class="package-info">
-                        <span class="package-name">Starter</span>
-                        <span class="package-gems">50 gems</span>
+                    <div class="package-icon-wrapper">
+                        <span class="material-symbols-outlined" style="color: #fbc02d;">bolt</span>
                     </div>
-                    <span class="package-price">49.000₫</span>
+                    <div class="package-info">
+                        <span class="package-name">Gói Khởi Đầu</span>
+                        <span class="package-gems">50 <span class="material-symbols-outlined" style="font-size: 14px; margin-left: 2px;">diamond</span></span>
+                    </div>
+                    <span class="package-price">49.000 <small>đ</small></span>
                 </button>
 
+                <!-- Pro (Popular) -->
                 <button class="gem-package popular" data-package="pro">
-                    <span class="package-badge">Phổ biến</span>
-                    <div class="package-icon">✨</div>
-                    <div class="package-info">
-                        <span class="package-name">Pro</span>
-                        <span class="package-gems">150 gems</span>
+                    <div class="popular-badge-container">
+                        <span class="badge-text">Phổ<br>biến</span>
                     </div>
-                    <span class="package-price">129.000₫</span>
+                    <div class="package-icon-wrapper">
+                        <span class="material-symbols-outlined" style="color: #fdd835;">auto_awesome</span>
+                    </div>
+                    <div class="package-info">
+                        <span class="package-name">Gói Pro</span>
+                        <span class="package-gems">150 <span class="material-symbols-outlined" style="font-size: 14px; margin-left: 2px;">diamond</span></span>
+                    </div>
+                    <span class="package-price">129.000 <small>đ</small></span>
                 </button>
 
+                <!-- Premium -->
                 <button class="gem-package" data-package="premium">
-                    <div class="package-icon">👑</div>
-                    <div class="package-info">
-                        <span class="package-name">Premium</span>
-                        <span class="package-gems">500 gems</span>
+                    <div class="package-icon-wrapper">
+                        <span style="font-size: 24px;">👑</span>
                     </div>
-                    <span class="package-price">399.000₫</span>
+                    <div class="package-info">
+                        <span class="package-name">Gói Premium</span>
+                        <span class="package-gems">500 <span class="material-symbols-outlined" style="font-size: 14px; margin-left: 2px;">diamond</span></span>
+                    </div>
+                    <span class="package-price">399.000 <small>đ</small></span>
                 </button>
             </div>
 
@@ -157,42 +222,102 @@
             </div>
         </section>
 
-        <!-- Auth Section (shown when not logged in) -->
+        <!-- Auth Section (Redesigned) -->
         <section id="auth-section" class="section auth-section hidden">
-            <div>
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
-                    style="margin-bottom: 16px; opacity: 0.5;">
-                    <circle cx="12" cy="8" r="4" />
-                    <path d="M20 21a8 8 0 00-16 0" />
-                </svg>
-                <p>Đăng nhập để thử đồ và lưu outfit</p>
-                <div class="auth-buttons">
-                    <button id="login-google-btn" class="btn btn-google btn-full">
-                        <svg width="18" height="18" viewBox="0 0 24 24">
-                            <path fill="#4285F4"
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                            <path fill="#34A853"
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                            <path fill="#FBBC05"
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                            <path fill="#EA4335"
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                        </svg>
-                        Tiếp tục với Google
-                    </button>
+            <!-- Auth Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Đăng nhập</button>
+                <button class="auth-tab" data-tab="register">Đăng ký</button>
+            </div>
 
-                    <!-- Divider -->
-                    <div class="auth-divider">
-                        <span>hoặc</span>
-                    </div>
-
-                    <!-- Skip Login Button -->
-                    <button id="skip-login-btn" class="btn btn-skip btn-full">
-                        Dùng thử không đăng nhập
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form">
+                <div class="form-header">
+                    <h3>Chào mừng trở lại! 👋</h3>
+                    <p>Đăng nhập để đồng bộ tủ đồ của bạn</p>
+                </div>
+                
+                <div class="input-group">
+                    <span class="material-symbols-outlined input-icon">mail</span>
+                    <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+                </div>
+                
+                <div class="input-group">
+                    <span class="material-symbols-outlined input-icon">lock</span>
+                    <input type="password" id="login-password" placeholder="Mật khẩu" autocomplete="current-password">
+                    <button class="toggle-password" type="button">
+                        <span class="material-symbols-outlined">visibility_off</span>
                     </button>
                 </div>
-                <p class="auth-note">Bạn có thể dùng thử với tính năng hạn chế</p>
+
+                <div class="form-actions">
+                    <label class="checkbox-container">
+                        <input type="checkbox" checked>
+                        <span class="checkmark"></span>
+                        Ghi nhớ tôi
+                    </label>
+                    <a href="#" class="forgot-password">Quên mật khẩu?</a>
+                </div>
+
+                <button id="login-submit-btn" class="btn btn-primary btn-full">
+                    Đăng nhập
+                </button>
             </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="auth-form hidden">
+                <div class="form-header">
+                    <h3>Tạo tài khoản mới 🚀</h3>
+                    <p>Khám phá phong cách của riêng bạn</p>
+                </div>
+
+                <div class="input-group">
+                    <span class="material-symbols-outlined input-icon">person</span>
+                    <input type="text" id="register-name" placeholder="Họ và tên" autocomplete="name">
+                </div>
+                
+                <div class="input-group">
+                    <span class="material-symbols-outlined input-icon">mail</span>
+                    <input type="email" id="register-email" placeholder="Email" autocomplete="email">
+                </div>
+                
+                <div class="input-group">
+                    <span class="material-symbols-outlined input-icon">lock</span>
+                    <input type="password" id="register-password" placeholder="Mật khẩu" autocomplete="new-password">
+                </div>
+
+                <div class="input-group">
+                    <span class="material-symbols-outlined input-icon">lock_reset</span>
+                    <input type="password" id="register-confirm-password" placeholder="Xác nhận mật khẩu" autocomplete="new-password">
+                </div>
+
+                <button id="register-submit-btn" class="btn btn-primary btn-full">
+                    Đăng ký ngay
+                </button>
+            </div>
+
+            <!-- Social Login Divider -->
+            <div class="auth-divider">
+                <span>Hoặc tiếp tục với</span>
+            </div>
+
+            <!-- Social Buttons -->
+            <div class="social-login-grid">
+                <button id="login-google-btn" class="social-btn google" title="Google">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google">
+                </button>
+                <button id="login-facebook-btn" class="social-btn facebook" title="Facebook">
+                    <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" alt="Facebook">
+                </button>
+                <button id="login-apple-btn" class="social-btn apple" title="Apple">
+                    <img src="https://www.svgrepo.com/show/445136/apple.svg" alt="Apple">
+                </button>
+            </div>
+
+            <!-- Guest Mode -->
+            <button id="skip-login-btn" class="btn-text-only">
+                Dùng thử không cần đăng nhập →
+            </button>
         </section>
 
         <!-- Main Content (shown when logged in) -->
@@ -206,22 +331,18 @@
             <section class="section">
                 <div class="section-header">
                     <h3>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="8" r="4" />
-                            <path d="M20 21a8 8 0 00-16 0" />
-                        </svg>
+                        <span class="material-icons-round">person</span>
                         Ảnh của bạn
                     </h3>
                     <!-- Removed upload button as requested -->
                 </div>
-                <div id="model-image-container" class="image-container">
-                    <div id="model-placeholder" class="placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <path d="M21 15l-5-5L5 21" />
-                        </svg>
-                        <span>Chọn ảnh bên dưới hoặc tải lên</span>
+                <div id="model-image-container" class="image-container model-container">
+                    <div id="model-placeholder" class="placeholder empty-state minimal">
+                        <div class="empty-icon-circle minimal">
+                            <span class="material-symbols-outlined">add_a_photo</span>
+                        </div>
+                        <span class="empty-label">THÊM ẢNH</span>
+                        <span class="empty-instruction">Ảnh toàn thân</span>
                     </div>
                     <img id="model-image" class="preview-image hidden" alt="Model">
                 </div>
@@ -253,12 +374,14 @@
                     <button id="paste-url-btn" class="section-action">Dán URL</button>
                 </div>
                 <div id="clothing-image-container" class="image-container">
-                    <div id="clothing-placeholder" class="placeholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                            <path
-                                d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z" />
-                        </svg>
-                        <span>Chuột phải vào ảnh trên web để thử</span>
+                    <div id="clothing-placeholder" class="placeholder empty-state">
+                        <div class="empty-icon-circle">
+                            <span class="material-symbols-outlined">checkroom</span>
+                        </div>
+                        <div class="empty-text">
+                            <span class="empty-title">Chưa có quần áo</span>
+                            <span class="empty-subtitle">Chuột phải vào ảnh bất kỳ<br>trên web để thử đồ</span>
+                        </div>
                     </div>
                     <img id="clothing-image" class="preview-image hidden" alt="Clothing">
                 </div>
@@ -284,7 +407,10 @@
                         Đã thử gần đây
                     </h3>
                     <div class="result-controls">
-                        <button id="clear-clothing-history" class="clear-btn" title="Xóa tất cả">Xóa hết</button>
+                        <button id="clear-clothing-history" class="clear-btn" title="Xóa tất cả">
+                            <span class="material-symbols-outlined">delete</span>
+                            <span>XÓA HẾT</span>
+                        </button>
                     </div>
                 </div>
                 <div class="clothing-history-grid" id="clothing-history-grid">
@@ -303,6 +429,7 @@
                         </svg>
                         Kết quả mới nhất
                     </h3>
+                    <button id="view-all-results-btn" class="section-action">Xem tất cả</button>
                 </div>
 
                 <!-- Result Image Container -->
@@ -313,39 +440,22 @@
                 <!-- Action Buttons -->
                 <div class="inline-result-actions">
                     <button id="result-download-btn" class="result-action-btn" title="Tải về">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                        </svg>
+                        <span class="material-symbols-outlined">download</span>
                     </button>
                     <button id="result-copy-btn" class="result-action-btn" title="Copy ảnh">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2" />
-                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                        </svg>
+                        <span class="material-symbols-outlined">content_copy</span>
                     </button>
                     <button id="result-save-btn" class="result-action-btn" title="Lưu vào tủ đồ">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
-                        </svg>
+                        <span class="material-symbols-outlined">bookmark_border</span>
                     </button>
                     <button id="result-share-btn" class="result-action-btn" title="Chia sẻ">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="18" cy="5" r="3" />
-                            <circle cx="6" cy="12" r="3" />
-                            <circle cx="18" cy="19" r="3" />
-                            <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" />
-                        </svg>
+                        <span class="material-symbols-outlined">share</span>
                     </button>
                     <button id="result-use-model-btn" class="result-action-btn" title="Sử dụng làm ảnh mẫu">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                        </svg>
+                        <span class="material-symbols-outlined">person</span>
                     </button>
                     <button id="result-popup-btn" class="result-action-btn" title="Mở popup riêng">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 3h6v6M14 10l7-7M10 3H3v18h18v-7" />
-                        </svg>
+                        <span class="material-symbols-outlined">open_in_new</span>
                     </button>
                 </div>
 
@@ -355,10 +465,7 @@
                         <input type="text" id="inline-edit-input" class="edit-input"
                             placeholder="Nhập yêu cầu chỉnh sửa..." />
                         <button id="inline-edit-btn" class="edit-submit-btn" title="Chỉnh sửa">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
+                            <span class="material-symbols-outlined">edit_square</span>
                         </button>
                     </div>
                     <div class="edit-suggestions">
@@ -377,24 +484,141 @@
                 </div>
             </section>
 
-            <!-- Result Thumbnails Section - History of all results -->
-            <section id="result-preview-section" class="section hidden">
-                <div class="section-header">
-                    <h3>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                            <path d="M2 17l10 5 10-5" />
-                            <path d="M2 12l10 5 10-5" />
-                        </svg>
-                        Kết quả
-                    </h3>
-                    <div class="result-controls">
-                        <span id="result-count" class="result-count">0 kết quả</span>
-                        <button id="clear-all-results" class="clear-btn" title="Xóa tất cả">Xóa hết</button>
+            <!-- Share Lookbook Section -->
+            <section id="share-lookbook-section" class="section share-section hidden">
+                <!-- Header -->
+                <div class="share-header">
+                    <button id="close-share-btn" class="icon-btn-plain">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <h2 class="share-title">The Lookbook</h2>
+                    <button class="icon-btn-plain">
+                        <span class="material-symbols-outlined">more_horiz</span>
+                    </button>
+                </div>
+
+                <!-- Scrollable Content -->
+                <div class="share-content">
+                    <!-- Lookbook Card -->
+                    <div id="lookbook-card" class="lookbook-card">
+                        <div class="lookbook-brand">GEMINI STYLIST</div>
+                        
+                        <!-- Images Container (1 or 2 images) -->
+                        <div id="lookbook-images" class="lookbook-images-container">
+                            <!-- Injected via JS -->
+                        </div>
+
+                        <!-- Editable Text -->
+                        <div class="lookbook-caption-container">
+                            <div class="lookbook-divider"></div>
+                            <div id="lookbook-caption" class="lookbook-caption" contenteditable="true" spellcheck="false">
+                                Help me choose the perfect fit for tonight's gala ✨
+                            </div>
+                            <div class="lookbook-subcaption">SPRING COLLECTION 2024</div>
+                        </div>
+
+                        <!-- Reaction Buttons (Decorative) -->
+                        <div class="lookbook-reactions">
+                            <button class="reaction-circle pink"><span class="material-symbols-outlined">favorite</span></button>
+                            <button class="reaction-circle yellow"><span class="material-symbols-outlined">auto_awesome</span></button>
+                            <button class="reaction-circle white"><span class="material-symbols-outlined">question_mark</span></button>
+                        </div>
+                    </div>
+
+                    <!-- Share to Socials -->
+                    <div class="share-socials-section">
+                        <h3 class="share-section-title">Share to Socials</h3>
+                        <div class="social-grid">
+                            <button class="social-item" data-platform="instagram">
+                                <div class="social-icon-circle instagram">
+                                    <img src="../assets/icon-instagram.svg" alt="IG" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiByeD0iNSIgcnk9IjUiLz48cGF0aCBkPSJNMTYgMTEuMzdBNCADIDAgMSAxIDEyLjYzIDggNCA0IDAgMCAxIDE2IDExLjM3eiIvPjxsaW5lIHgxPSIxNy41IiB5MT0iNi41IiB4Mj0iMTcuNTEiIHkyPSI2LjUiLz48L3N2Zz4='">
+                                </div>
+                                <span class="social-label">Story</span>
+                            </button>
+                            <button class="social-item" data-platform="twitter">
+                                <div class="social-icon-circle twitter">
+                                    <span class="social-text-icon">𝕏</span>
+                                </div>
+                                <span class="social-label">X</span>
+                            </button>
+                            <button class="social-item" data-platform="telegram">
+                                <div class="social-icon-circle telegram">
+                                    <span class="material-symbols-outlined">send</span>
+                                </div>
+                                <span class="social-label">Send</span>
+                            </button>
+                            <button class="social-item" data-platform="more">
+                                <div class="social-icon-circle more">
+                                    <span class="material-symbols-outlined">more_horiz</span>
+                                </div>
+                                <span class="social-label">More</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Copy Link -->
+                    <div class="copy-link-card">
+                        <div class="link-icon-circle">
+                            <span class="material-symbols-outlined">link</span>
+                        </div>
+                        <div class="link-info">
+                            <span class="link-label">STYLIST LINK</span>
+                            <span class="link-url">fitly.app/share/x839z...</span>
+                        </div>
+                        <button id="copy-link-btn" class="copy-pill-btn">Copy</button>
                     </div>
                 </div>
-                <div id="result-thumbnails" class="result-thumbnails">
-                    <!-- Thumbnails of results will be rendered here -->
+
+                <!-- Bottom Button -->
+                <div class="share-footer">
+                    <button id="download-final-btn" class="download-block-btn">
+                        DOWNLOAD LOOKBOOK <span class="material-symbols-outlined">arrow_downward</span>
+                    </button>
+                </div>
+            </section>
+            <section id="result-section" class="section gallery-section hidden">
+                <!-- Gallery Header -->
+                <div class="gallery-header-top">
+                    <div class="gallery-title-group">
+                        <div class="gallery-subtitle">
+                            <span class="material-symbols-outlined sparkle-icon">auto_awesome</span>
+                            BỘ SƯU TẬP
+                        </div>
+                        <h2 class="gallery-title">Thư viện ảnh</h2>
+                    </div>
+                    <div class="gallery-actions">
+                        <button class="icon-btn-circle" title="Bộ lọc">
+                            <span class="material-symbols-outlined">tune</span>
+                        </button>
+                        <button id="close-gallery-btn" class="icon-btn-circle" title="Đóng">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="gallery-tabs">
+                    <button class="gallery-tab active" data-tab="latest">Mới nhất</button>
+                    <button class="gallery-tab" data-tab="shared">Đã chia sẻ</button>
+                    <button class="gallery-tab" data-tab="drafts">Nháp</button>
+                    <button class="gallery-tab" data-tab="archived">Lưu trữ</button>
+                </div>
+
+                <!-- Gallery Grid -->
+                <div id="result-thumbnails" class="gallery-grid">
+                    <!-- Results injected by JS -->
+                </div>
+
+                <!-- Sticky Action Bar -->
+                <div class="gallery-sticky-actions">
+                    <button id="download-lookbook-btn" class="action-pill-btn light">
+                        <span class="material-symbols-outlined">download</span>
+                        Tải Lookbook
+                    </button>
+                    <button id="share-friends-btn" class="action-pill-btn dark">
+                        <span class="material-symbols-outlined">ios_share</span>
+                        Chia sẻ
+                    </button>
                 </div>
             </section>
 
@@ -410,67 +634,155 @@
 
         <!-- Note: Result popups are now injected directly into the webpage for full-screen dragging -->
 
-        <!-- Loading Overlay - Cute Animation -->
+        <!-- Loading Overlay - Anime Style -->
         <div id="loading-overlay" class="loading-overlay hidden">
-            <div class="loading-animation">
-                <!-- Animated Illustration -->
-                <div class="loading-illustration">
-                    <!-- Hanger SVG -->
-                    <svg viewBox="0 0 100 100" class="loading-hanger">
+            <div class="loading-content-wrapper">
+                <!-- Anime Character SVG -->
+                <div class="anime-mascot">
+                    <svg viewBox="0 0 200 200" class="chibi-character">
                         <defs>
-                            <linearGradient id="hangerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#f97316" />
-                                <stop offset="100%" stop-color="#ec4899" />
+                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                            <linearGradient id="hairGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#FFD1DC" /> <!-- Light Pink -->
+                                <stop offset="100%" stop-color="#FF9EAA" /> <!-- Darker Pink -->
+                            </linearGradient>
+                            <linearGradient id="dressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#E0F7FA" />
+                                <stop offset="100%" stop-color="#B2EBF2" />
                             </linearGradient>
                         </defs>
-                        <!-- Hook -->
-                        <path d="M50 10 Q50 4 55 4 Q60 4 60 10" fill="none" stroke="url(#hangerGrad)" stroke-width="3"
-                            stroke-linecap="round" />
-                        <!-- Hanger body -->
-                        <path d="M50 18 L22 42 L78 42 Z" fill="none" stroke="url(#hangerGrad)" stroke-width="3"
-                            stroke-linejoin="round" stroke-linecap="round" />
-                    </svg>
+                        
+                        <!-- Glow effect behind -->
+                        <circle cx="100" cy="100" r="70" fill="rgba(255, 255, 255, 0.5)" filter="url(#glow)" class="mascot-glow" />
 
-                    <!-- Dress SVG (animated) -->
-                    <svg viewBox="0 0 100 100" class="loading-dress">
-                        <defs>
-                            <linearGradient id="dressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" stop-color="#f97316" />
-                                <stop offset="50%" stop-color="#ec4899" />
-                                <stop offset="100%" stop-color="#8b5cf6" />
-                            </linearGradient>
-                        </defs>
-                        <!-- Dress body -->
-                        <path d="M42 42 L36 88 Q50 96 64 88 L58 42 Q50 38 42 42" fill="url(#dressGrad)" opacity="0.9" />
-                        <!-- Dress top -->
-                        <path d="M44 38 Q50 32 56 38 L54 46 Q50 44 46 46 Z" fill="url(#dressGrad)" />
+                        <!-- Body -->
+                        <path d="M85 130 Q100 135 115 130 L125 180 Q100 190 75 180 Z" fill="url(#dressGrad)" />
+                        
+                        <!-- Head -->
+                        <circle cx="100" cy="90" r="45" fill="#FFE0BD" /> <!-- Skin -->
+                        
+                        <!-- Hair (Back) -->
+                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z" fill="url(#hairGrad)" />
+                        
+                        <!-- Face -->
+                        <!-- Eyes -->
+                        <ellipse cx="82" cy="95" rx="6" ry="8" fill="#5D4037" class="eye-blink" />
+                        <ellipse cx="118" cy="95" rx="6" ry="8" fill="#5D4037" class="eye-blink" />
+                        <!-- Blush -->
+                        <ellipse cx="75" cy="105" rx="5" ry="3" fill="#FFAB91" opacity="0.6" />
+                        <ellipse cx="125" cy="105" rx="5" ry="3" fill="#FFAB91" opacity="0.6" />
+                        <!-- Mouth -->
+                        <path d="M95 108 Q100 112 105 108" fill="none" stroke="#A1887F" stroke-width="2" stroke-linecap="round" />
+
+                        <!-- Hair (Bangs) -->
+                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90" fill="url(#hairGrad)" />
+                        
+                        <!-- Wand -->
+                        <g class="wand-animation">
+                            <line x1="130" y1="120" x2="150" y2="100" stroke="#FFCC80" stroke-width="4" stroke-linecap="round" />
+                            <path d="M150 100 L145 95 L150 90 L155 95 Z" fill="#FFD700" /> <!-- Star tip -->
+                            <circle cx="150" cy="100" r="8" fill="none" stroke="#FFF" stroke-width="1" opacity="0.8" />
+                        </g>
+
                         <!-- Sparkles -->
-                        <circle cx="30" cy="55" r="2" fill="#fcd34d" class="sparkle" />
-                        <circle cx="70" cy="60" r="1.5" fill="#fcd34d" class="sparkle-delay" />
-                        <circle cx="50" cy="75" r="2" fill="#fcd34d" class="sparkle" />
-                        <circle cx="28" cy="78" r="1" fill="#fcd34d" class="sparkle-delay" />
-                        <circle cx="72" cy="82" r="1.5" fill="#fcd34d" class="sparkle" />
+                        <g class="sparkles-group">
+                            <text x="150" y="80" font-size="20" fill="#FFD700" class="sparkle-1">✨</text>
+                            <text x="40" y="120" font-size="16" fill="#81D4FA" class="sparkle-2">✦</text>
+                            <text x="160" y="140" font-size="18" fill="#FF8A80" class="sparkle-3">✨</text>
+                        </g>
                     </svg>
-
-                    <!-- Floating emojis -->
-                    <span class="floating-emoji" style="font-size: 16px;">💖</span>
-                    <span class="floating-emoji" style="font-size: 14px;">✨</span>
-                    <span class="floating-emoji" style="font-size: 15px;">💫</span>
-                    <span class="floating-emoji" style="font-size: 12px;">🌟</span>
                 </div>
 
-                <!-- Loading Text -->
-                <p id="loading-text" class="loading-text">Đang tạo phép màu... ✨</p>
-
-                <!-- Progress Bar -->
-                <div class="loading-progress">
-                    <div id="loading-progress-bar" class="loading-progress-bar" style="width: 0%"></div>
+                <!-- Text & Progress -->
+                <div class="loading-info">
+                    <h3 id="loading-text" class="anime-title">Đang hô biến... ✨</h3>
+                    
+                    <div class="magic-progress-container">
+                        <div class="magic-progress-bar">
+                            <div id="loading-progress-bar" class="magic-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="magic-sparkle-follower"></div>
+                    </div>
+                    
+                    <p id="loading-progress-text" class="anime-percent">0%</p>
+                    <p id="loading-tip" class="anime-tip">💡 AI đang thử đồ cho bạn đó!</p>
                 </div>
-                <p id="loading-progress-text" class="loading-progress-text">...</p>
+            </div>
+        </div>
 
-                <!-- Fun Tip -->
-                <p id="loading-tip" class="loading-tip">💡 AI đang phân tích hàng triệu pixels để tạo kết quả hoàn hảo!
-                </p>
+        <!-- Error Overlay - Anime Style -->
+        <div id="error-overlay" class="loading-overlay hidden">
+            <div class="loading-content-wrapper error-wrapper">
+                <!-- Anime Character SVG (Sad/Confused) -->
+                <div class="anime-mascot">
+                    <svg viewBox="0 0 200 200" class="chibi-character">
+                        <!-- Reusing defs from loading if possible, or re-defining -->
+                        <defs>
+                            <linearGradient id="hairGradErr" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#FFD1DC" />
+                                <stop offset="100%" stop-color="#FF9EAA" />
+                            </linearGradient>
+                            <linearGradient id="dressGradErr" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#E0F7FA" />
+                                <stop offset="100%" stop-color="#B2EBF2" />
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- Body (Same) -->
+                        <path d="M85 130 Q100 135 115 130 L125 180 Q100 190 75 180 Z" fill="url(#dressGradErr)" />
+                        
+                        <!-- Head (Same) -->
+                        <circle cx="100" cy="90" r="45" fill="#FFE0BD" />
+                        
+                        <!-- Hair (Back) (Same) -->
+                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z" fill="url(#hairGradErr)" />
+                        
+                        <!-- Face (Sad Expression) -->
+                        <!-- Eyes (X shape or tearing) -->
+                        <g class="sad-eyes">
+                            <text x="75" y="100" font-size="20" fill="#5D4037" font-family="monospace" font-weight="bold">></text>
+                            <text x="115" y="100" font-size="20" fill="#5D4037" font-family="monospace" font-weight="bold"><</text>
+                        </g>
+                        
+                        <!-- Blush (Same) -->
+                        <ellipse cx="75" cy="105" rx="5" ry="3" fill="#FFAB91" opacity="0.6" />
+                        <ellipse cx="125" cy="105" rx="5" ry="3" fill="#FFAB91" opacity="0.6" />
+
+                        <!-- Mouth (Wavy/Sad) -->
+                        <path d="M90 115 Q100 110 110 115" fill="none" stroke="#A1887F" stroke-width="2" stroke-linecap="round" />
+                        
+                        <!-- Tear Drop Animation -->
+                        <path d="M70 105 Q65 115 70 120 Q75 115 70 105" fill="#81D4FA" class="tear-drop" opacity="0.8" />
+
+                        <!-- Hair (Bangs) (Same) -->
+                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90" fill="url(#hairGradErr)" />
+                        
+                        <!-- Broken Wand / Question Mark -->
+                        <text x="140" y="100" font-size="32" fill="#FFAB91" class="question-mark">?</text>
+                    </svg>
+                </div>
+
+                <!-- Error Text -->
+                <div class="loading-info">
+                    <h3 class="anime-title error-title">Oops! Có lỗi rồi... 😿</h3>
+                    
+                    <p id="error-message-text" class="anime-tip error-message">
+                        AI không thể xử lý ảnh này được.
+                    </p>
+
+                    <div class="error-actions">
+                        <button id="error-retry-btn" class="btn btn-primary btn-sm">
+                            <span class="material-symbols-outlined">refresh</span>
+                            Thử lại
+                        </button>
+                        <button id="error-close-btn" class="btn btn-secondary btn-sm">
+                            Đóng
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -478,6 +790,7 @@
     <script src="../lib/icons.js"></script>
     <script src="../lib/i18n.js"></script>
     <script src="image_cache_db.js"></script>
+    <script src="gallery_helpers.js"></script>
     <script src="sidebar.js"></script>
 </body>
 

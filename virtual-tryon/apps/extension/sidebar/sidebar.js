@@ -133,6 +133,12 @@ const elements = {
     loadingText: $('loading-text'),
     loadingProgressBar: $('loading-progress-bar'),
 
+    // Error Overlay
+    errorOverlay: $('error-overlay'),
+    errorMessageText: $('error-message-text'),
+    errorRetryBtn: $('error-retry-btn'),
+    errorCloseBtn: $('error-close-btn'),
+
     // Recent clothing (will be added dynamically)
     recentClothingSection: null,
 };
@@ -147,10 +153,101 @@ async function init() {
     await loadModelImage();
     await checkPendingImage();
     await loadRecentClothing();
+    await loadResults(); // Load saved results
     setupEventListeners();
+    initTooltipSystem();
     listenForMessages();
     listenForStorageChanges();
     console.log('Fitly sidebar initialized');
+}
+
+// ==========================================
+// TOOLTIP SYSTEM
+// ==========================================
+
+function initTooltipSystem() {
+    // Create global tooltip element
+    let tooltip = document.getElementById('global-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'global-tooltip';
+        document.body.appendChild(tooltip);
+    }
+
+    // Delegate event listeners for better performance and dynamic elements
+    document.addEventListener('mouseover', (e) => {
+        // Find closest element with title or data-tooltip
+        const target = e.target.closest('[title], [data-tooltip]');
+        if (!target) return;
+
+        // Ignore if it's not an interactive element (optional check)
+        // For now, we trust the [title] attribute
+
+        // Handle title attribute (browser native tooltip)
+        const title = target.getAttribute('title');
+        if (title) {
+            target.setAttribute('data-tooltip', title);
+            target.setAttribute('data-original-title', title);
+            target.removeAttribute('title'); // Remove to prevent native tooltip
+        }
+
+        const tooltipText = target.getAttribute('data-tooltip');
+        if (tooltipText) {
+            showGlobalTooltip(target, tooltipText);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) {
+            // Restore title if it was swapped
+            const originalTitle = target.getAttribute('data-original-title');
+            if (originalTitle) {
+                target.setAttribute('title', originalTitle);
+                target.removeAttribute('data-original-title');
+            }
+            hideGlobalTooltip();
+        }
+    });
+}
+
+function showGlobalTooltip(element, text) {
+    const tooltip = document.getElementById('global-tooltip');
+    if (!tooltip) return;
+
+    tooltip.textContent = text;
+    tooltip.classList.add('visible');
+
+    // Calculate position
+    const rect = element.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+
+    let top = rect.top - tooltipRect.height - 8; // Above element
+    let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2); // Centered
+
+    // Prevent going off-screen top
+    if (top < 0) {
+        top = rect.bottom + 8; // Move below
+        tooltip.classList.add('bottom'); // Add class for arrow rotation if needed
+    } else {
+        tooltip.classList.remove('bottom');
+    }
+
+    // Prevent going off-screen left/right
+    if (left < 4) left = 4;
+    if (left + tooltipRect.width > window.innerWidth - 4) {
+        left = window.innerWidth - tooltipRect.width - 4;
+    }
+
+    tooltip.style.top = `${top}px`;
+    tooltip.style.left = `${left}px`;
+}
+
+function hideGlobalTooltip() {
+    const tooltip = document.getElementById('global-tooltip');
+    if (tooltip) {
+        tooltip.classList.remove('visible');
+    }
 }
 
 // ==========================================
@@ -199,16 +296,26 @@ function renderUserModels() {
         return;
     }
 
-    grid.innerHTML = state.userModels.map(model => {
-        const isSelected = state.selectedModelId === model.id;
-        const isDefault = state.defaultModelId === model.id;
+    grid.innerHTML = state.recentModels.map(item => {
+        const isSelected = state.modelImage === item.imageUrl;
+        const isDefault = item.isDefault;
+        const label = item.label || 'FRONT'; // Default label
 
         return `
             <div class="user-model-item ${isSelected ? 'selected' : ''} ${isDefault ? 'is-default' : ''}" 
-                 data-id="${model.id}" 
-                 data-url="${model.url}"
-                 title="${model.label}${isDefault ? ' (Mặc định)' : ''}">
-                <img src="${model.url}" alt="${model.label}" loading="lazy">
+                 data-id="${item.id}" 
+                 data-url="${item.imageUrl}"
+                 title="${item.label}${isDefault ? ' (Mặc định)' : ''}">
+                <img src="${item.imageUrl}" alt="${item.label}" loading="lazy">
+                
+                <!-- Overlay with Text -->
+                <div class="thumbnail-overlay">
+                    <span class="thumbnail-label">${label}</span>
+                </div>
+
+                <!-- Status Dot -->
+                <div class="status-dot"></div>
+
                 <div class="model-item-actions">
                     ${!isDefault ? `
                         <button class="model-action-btn default-btn" data-action="set-default" title="Đặt mặc định">★</button>
@@ -336,6 +443,52 @@ async function setDefaultModel(modelId) {
     }
 }
 
+// Handle Social Login
+async function handleSocialLogin(provider) {
+    // Get server URL from service worker
+    let serverUrl;
+    try {
+        const response = await chrome.runtime.sendMessage({ type: 'GET_SERVER_URL' });
+        serverUrl = response.url;
+    } catch (error) {
+        serverUrl = 'http://localhost:3000'; // Fallback
+    }
+
+    // Ping server first to ensure it's running
+    try {
+        await fetch(`${serverUrl}/api/auth/me`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' },
+            cache: 'no-store',
+        }).catch(() => null);
+    } catch (error) { }
+
+    // Open popup window directly (more reliable than iframe overlay)
+    // For now all providers redirect to same auth endpoint or specific provider endpoint
+    const popupUrl = `${serverUrl}/auth/popup?provider=${provider}`;
+    const popupWidth = 500;
+    const popupHeight = 600;
+    const left = Math.round((screen.width - popupWidth) / 2);
+    const top = Math.round((screen.height - popupHeight) / 2);
+
+    try {
+        await chrome.windows.create({
+            url: popupUrl,
+            type: 'popup',
+            width: popupWidth,
+            height: popupHeight,
+            left: left,
+            top: top,
+            focused: true
+        });
+        console.log(`[Fitly] ${provider} login popup window opened`);
+    } catch (winError) {
+        console.error('Failed to open popup window:', winError);
+        // Fallback: open as new tab
+        chrome.tabs.create({ url: popupUrl });
+    }
+}
+
 // Check if there's a pending image from context menu selection
 async function checkPendingImage() {
     try {
@@ -366,6 +519,33 @@ async function loadModelImage() {
         }
     } catch (error) {
         console.error('Failed to load model image:', error);
+    }
+}
+
+// Load saved try-on results
+async function loadResults() {
+    try {
+        const data = await chrome.storage.local.get('tryon_results');
+        if (data.tryon_results) {
+            state.results = data.tryon_results;
+            // Ensure nextResultId is higher than max existing ID
+            if (state.results.length > 0) {
+                const maxId = Math.max(...state.results.map(r => r.id));
+                state.nextResultId = maxId + 1;
+            }
+        }
+        updateGalleryUI();
+    } catch (error) {
+        console.error('Failed to load results:', error);
+    }
+}
+
+// Save results to storage
+async function saveResults() {
+    try {
+        await chrome.storage.local.set({ tryon_results: state.results });
+    } catch (error) {
+        console.error('Failed to save results:', error);
     }
 }
 
@@ -403,6 +583,9 @@ function renderClothingHistory() {
         const isSaved = item.saved;
         const hasSourceUrl = item.sourceUrl && item.sourceUrl.startsWith('http');
         const isLocalUpload = item.sourceType === 'local_upload';
+        
+        // Determine label (FRONT/SIDE/etc) based on analysis or random for demo
+        const poseLabel = item.pose || 'FRONT';
 
         return `
             <div class="clothing-history-item ${isSelected ? 'selected' : ''} ${isSaved ? 'saved' : ''} ${hasSourceUrl ? 'has-source' : ''}" 
@@ -414,9 +597,17 @@ function renderClothingHistory() {
                  title="${isSaved ? 'Đã lưu vào bộ sưu tập' : 'Click để chọn'}${hasSourceUrl ? ' • Có link sản phẩm' : ''}${isLocalUpload ? ' • Ảnh tải lên' : ''}">
                 <img src="${item.imageUrl}" alt="Clothing" loading="lazy"
                      onerror="this.onerror=null; loadCachedFallback(this, '${item.cachedKey || item.id || ''}');">
+                
+                <!-- Overlay with Text -->
+                <div class="thumbnail-overlay">
+                    <span class="thumbnail-label">${poseLabel}</span>
+                </div>
+
+                <!-- Status Dot -->
+                <div class="status-dot"></div>
+
                 ${item.tryCount > 1 ? `<span class="clothing-try-count">×${item.tryCount}</span>` : ''}
-                ${isLocalUpload ? '<span class="clothing-source-badge" title="Ảnh tải lên">📱</span>' : ''}
-                ${!isLocalUpload && hasSourceUrl ? '<span class="clothing-source-badge" title="Có link sản phẩm">🔗</span>' : ''}
+                
                 <button class="clothing-quick-try" data-action="quick-try" title="Thử ngay!">
                     ✨ Thử
                 </button>
@@ -657,46 +848,65 @@ function updateUI() {
     }
 
     // Update profile button with avatar (sync with web app style)
-    if (elements.profileBtn) {
+    const profileBtn = document.getElementById('profile-btn');
+    if (profileBtn) {
         const avatarUrl = state.profile?.avatar_url;
-        const displayName = state.profile?.full_name || state.user?.email || 'U';
+        const displayName = state.profile?.full_name || state.user?.email?.split('@')[0] || 'Guest';
+        const initial = displayName.charAt(0).toUpperCase();
+        
+        // Greeting based on time
+        const hour = new Date().getHours();
+        let greeting = 'GOOD MORNING';
+        if (hour >= 12 && hour < 18) greeting = 'GOOD AFTERNOON';
+        else if (hour >= 18) greeting = 'GOOD EVENING';
+
+        // Badge content (using flag based on locale)
+        const flags = {
+            'vi': '🇻🇳', 'en': '🇺🇸', 'ja': '🇯🇵', 'ko': '🇰🇷', 
+            'zh': '🇨🇳', 'th': '🇹🇭', 'id': '🇮🇩', 'es': '🇪🇸', 'fr': '🇫🇷'
+        };
+        const flag = flags[state.locale] || '🇻🇳';
 
         if (state.authenticated && avatarUrl) {
-            // Show avatar image
-            elements.profileBtn.innerHTML = `
-                <img src="${avatarUrl}" 
-                     alt="Avatar" 
-                     style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                <span style="display: none; width: 100%; height: 100%; border-radius: 50%; 
-                             background: linear-gradient(135deg, #f97316, #ec4899); 
-                             color: white; font-size: 12px; font-weight: 600;
-                             align-items: center; justify-content: center;">
-                    ${displayName.charAt(0).toUpperCase()}
-                </span>
+            // Show avatar image + Text
+            profileBtn.innerHTML = `
+                <div class="profile-avatar-container">
+                    <img src="${avatarUrl}" alt="Avatar" class="avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="avatar-fallback" style="display: none;">${initial}</div>
+                    <div class="avatar-badge">${flag}</div>
+                </div>
+                <div class="profile-text-info">
+                    <span class="greeting-text">${greeting}</span>
+                    <span class="username-text">${displayName}</span>
+                </div>
             `;
-            elements.profileBtn.title = displayName;
         } else if (state.authenticated) {
-            // Show initial letter if no avatar
-            elements.profileBtn.innerHTML = `
-                <span style="width: 100%; height: 100%; border-radius: 50%; 
-                             background: linear-gradient(135deg, #f97316, #ec4899); 
-                             color: white; font-size: 12px; font-weight: 600;
-                             display: flex; align-items: center; justify-content: center;">
-                    ${displayName.charAt(0).toUpperCase()}
-                </span>
+            // Show initial letter + Text
+            profileBtn.innerHTML = `
+                <div class="profile-avatar-container">
+                    <div class="avatar-fallback">${initial}</div>
+                    <div class="avatar-badge">${flag}</div>
+                </div>
+                <div class="profile-text-info">
+                    <span class="greeting-text">${greeting}</span>
+                    <span class="username-text">${displayName}</span>
+                </div>
             `;
-            elements.profileBtn.title = displayName;
         } else {
-            // Not authenticated - show default icon
-            elements.profileBtn.innerHTML = `
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="8" r="4"/>
-                    <path d="M20 21a8 8 0 00-16 0"/>
-                </svg>
+            // Not authenticated - show Guest
+            profileBtn.innerHTML = `
+                <div class="profile-avatar-container">
+                    <div class="avatar-fallback" style="background: #e0e0e0; color: #757575;">
+                        <span class="material-symbols-outlined" style="font-size: 20px;">person</span>
+                    </div>
+                </div>
+                <div class="profile-text-info">
+                    <span class="greeting-text">WELCOME</span>
+                    <span class="username-text">Guest</span>
+                </div>
             `;
-            elements.profileBtn.title = 'Tài khoản';
         }
+        profileBtn.title = state.authenticated ? displayName : t('account');
     }
 
 
@@ -747,118 +957,260 @@ function updateUI() {
         }
     }
 
-    // Update results section
-    updateResultsUI();
+    // Results are now in the gallery section
+    updateGalleryUI();
 }
 
-// ==========================================
-// RESULTS & POPUPS MANAGEMENT
-// ==========================================
-
-function updateResultsUI() {
-    // Update results count
-    if (elements.resultCount) {
-        elements.resultCount.textContent = `${state.results.length} kết quả`;
-    }
-
-    // Show/hide results section
-    if (state.results.length > 0) {
-        elements.resultPreviewSection?.classList.remove('hidden');
-    } else {
-        elements.resultPreviewSection?.classList.add('hidden');
-    }
-
-    // Render thumbnails
-    renderResultThumbnails();
-}
-
-function renderResultThumbnails() {
-    const container = elements.resultThumbnails;
+function updateGalleryUI() {
+    const container = document.getElementById('result-thumbnails');
     if (!container) return;
 
     if (state.results.length === 0) {
-        container.innerHTML = `
-            <div class="result-thumbnails-empty">
-                Chưa có kết quả. Thử đồ để xem kết quả ở đây.
-            </div>
-        `;
+        // Generate Mock Data for Demo if empty
+        const mockResults = [
+            { id: 101, name: 'Everyday Chic', imageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 7200000, matchPercentage: 98, isFeatured: false },
+            { id: 102, name: 'Office Ready', imageUrl: 'https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 86400000, matchPercentage: 92, isFeatured: false },
+            { id: 103, name: 'Gala Evening', imageUrl: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 172800000, matchPercentage: 99, isFeatured: true },
+            { id: 104, name: 'City Walker', imageUrl: 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 259200000, matchPercentage: 88, isFeatured: false }
+        ];
+        
+        container.innerHTML = mockResults.map((result, index) => {
+             const isSelected = state.selectedResultIds?.includes(result.id);
+             // Default first one selected for demo
+             if (index === 0 && (!state.selectedResultIds || state.selectedResultIds.length === 0)) {
+                 // isSelected = true; 
+             }
+             
+             return renderGalleryCard(result, isSelected);
+        }).join('');
+        
+        // Add listeners for mock data
+        addGalleryCardListeners(container, true);
         return;
     }
 
     container.innerHTML = state.results.map((result, index) => {
-        const isActive = state.activePopups.includes(result.id);
-        const hasSourceUrl = result.sourceUrl && result.sourceUrl.startsWith('http');
-        const displayName = result.name || `Kết quả #${index + 1}`;
-        return `
-            <div class="result-thumbnail ${isActive ? 'active' : ''} ${hasSourceUrl ? 'has-source' : ''}" 
-                 data-id="${result.id}"
-                 data-source-url="${result.sourceUrl || ''}"
-                 title="${displayName}${hasSourceUrl ? ' • Có link sản phẩm' : ''} • Click để mở popup">
-                <img src="${result.imageUrl}" alt="${displayName}" loading="lazy">
-                <span class="result-thumbnail-number">#${index + 1}</span>
-                <span class="result-thumbnail-name" title="Click để đổi tên">${result.name ? escapeHtml(result.name) : ''}</span>
-                ${hasSourceUrl ? '<span class="result-source-badge" title="Có link sản phẩm">🔗</span>' : ''}
-                <div class="result-thumbnail-actions">
-                    <button class="result-thumbnail-btn" data-action="copy" title="Copy ảnh">📋</button>
-                    <button class="result-thumbnail-btn" data-action="rename" title="Đổi tên">✏️</button>
-                    ${hasSourceUrl ? `<button class="result-thumbnail-btn" data-action="visit" title="Mở trang sản phẩm">🛒</button>` : ''}
-                    <button class="result-thumbnail-btn" data-action="open" title="Mở popup">⤢</button>
-                    <button class="result-thumbnail-btn close-btn" data-action="delete" title="Xóa">×</button>
-                </div>
-            </div>
-        `;
+        const isSelected = state.selectedResultIds?.includes(result.id);
+        return renderGalleryCard(result, isSelected);
     }).join('');
 
     // Add event listeners
-    container.querySelectorAll('.result-thumbnail').forEach(thumb => {
-        // Click on thumbnail (excluding action buttons and source badge) opens popup
-        thumb.addEventListener('click', (e) => {
-            // Skip if clicking on action buttons or source badge
-            if (e.target.closest('.result-thumbnail-actions')) return;
-            if (e.target.closest('.result-source-badge')) return;
+    addGalleryCardListeners(container, false);
 
-            const id = parseInt(thumb.dataset.id);
-            openResultPopup(id);
+    // Update sticky action bar visibility and text
+    updateStickyActionBar();
+}
+
+function renderGalleryCard(result, isSelected) {
+    const displayName = result.name || `Outfit #${result.id}`;
+    const timeAgo = getTimeAgo(result.timestamp);
+    const matchPercentage = result.matchPercentage || 95;
+    const isFeatured = result.isFeatured || false;
+
+    return `
+        <div class="gallery-card" data-id="${result.id}">
+            <div class="gallery-card-image-wrapper">
+                <img src="${result.imageUrl}" alt="${displayName}" class="gallery-card-image" loading="lazy">
+                
+                <!-- Selection Checkbox -->
+                <div class="card-select-check ${isSelected ? 'selected' : ''}" data-action="toggle-select">
+                    ${isSelected ? '<span class="material-symbols-outlined">check</span>' : ''}
+                </div>
+
+                <!-- Badges -->
+                ${isFeatured ? '<div class="card-feature-badge">★ Featured</div>' : `<div class="card-match-badge">${matchPercentage}% Match</div>`}
+            </div>
+            
+            <div class="gallery-card-content">
+                <h3 class="gallery-card-title">${escapeHtml(displayName)}</h3>
+                <p class="gallery-card-meta">Created ${timeAgo}</p>
+                
+                <div class="gallery-card-actions">
+                    <button class="card-swap-btn" data-action="open">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">sync_alt</span>
+                        Swap
+                    </button>
+                    <button class="card-delete-btn" data-action="delete">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function addGalleryCardListeners(container, isMock) {
+    container.querySelectorAll('.gallery-card').forEach(card => {
+        const id = parseInt(card.dataset.id);
+
+        // Toggle selection
+        card.querySelector('.card-select-check').addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleResultSelection(id);
         });
 
-        // Click on source badge opens product page
-        const sourceBadge = thumb.querySelector('.result-source-badge');
-        if (sourceBadge) {
-            sourceBadge.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const sourceUrl = thumb.dataset.sourceUrl;
-                if (sourceUrl) {
-                    openProductPage(sourceUrl);
-                }
-            });
-            // Add pointer cursor to indicate clickable
-            sourceBadge.style.cursor = 'pointer';
-        }
+        // Open popup (Swap)
+        card.querySelector('[data-action="open"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if(isMock) {
+                showToast("Opening swap view...", "info");
+            } else {
+                openResultPopup(id);
+            }
+        });
 
-        thumb.querySelectorAll('.result-thumbnail-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = parseInt(thumb.dataset.id);
-                const action = btn.dataset.action;
-                const sourceUrl = thumb.dataset.sourceUrl;
-
-                if (action === 'open') {
-                    openResultPopup(id);
-                } else if (action === 'delete') {
+        // Delete
+        card.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(t('delete') + '?')) {
+                if (isMock) {
+                    card.remove();
+                    showToast("Deleted (Demo)", "success");
+                } else {
                     deleteResult(id);
-                } else if (action === 'visit' && sourceUrl) {
-                    openProductPage(sourceUrl);
-                } else if (action === 'rename') {
-                    renameResult(id);
-                } else if (action === 'copy') {
-                    const result = state.results.find(r => r.id === id);
-                    if (result) {
-                        copyResultImage(result.imageUrl);
-                    }
                 }
-            });
+            }
+        });
+        
+        // Click on image
+        card.querySelector('.gallery-card-image-wrapper').addEventListener('click', (e) => {
+            if (!e.target.closest('.card-select-check')) {
+                toggleResultSelection(id);
+            }
         });
     });
+}
+
+function updateStickyActionBar() {
+    const stickyBar = document.querySelector('.gallery-sticky-actions');
+    if (!stickyBar) return;
+
+    const selectedCount = state.selectedResultIds?.length || 0;
+    const shareBtn = document.getElementById('share-friends-btn');
+    
+    if (selectedCount > 0) {
+        stickyBar.classList.remove('hidden');
+        if (shareBtn) {
+            shareBtn.innerHTML = `<span class="material-symbols-outlined">ios_share</span> Chia sẻ ${selectedCount} mục`;
+        }
+    } else {
+        // Option to hide or keep visible. Let's keep visible but default action
+        // stickyBar.classList.add('hidden');
+        if (shareBtn) {
+            shareBtn.innerHTML = `<span class="material-symbols-outlined">ios_share</span> Chia sẻ với bạn bè`;
+        }
+    }
+}
+
+function toggleResultSelection(id) {
+    if (!state.selectedResultIds) state.selectedResultIds = [];
+    
+    const index = state.selectedResultIds.indexOf(id);
+    if (index === -1) {
+        // Limit selection to 2 for comparison share
+        if (state.selectedResultIds.length >= 2) {
+            state.selectedResultIds.shift(); // Remove oldest
+        }
+        state.selectedResultIds.push(id);
+    } else {
+        state.selectedResultIds.splice(index, 1);
+    }
+    updateGalleryUI();
+}
+
+// ==========================================
+// SHARE LOOKBOOK LOGIC
+// ==========================================
+
+function initShareLookbookEvents() {
+    // Open Share View from Gallery
+    document.getElementById('share-friends-btn')?.addEventListener('click', () => {
+        openShareLookbook();
+    });
+
+    // Close Share View
+    document.getElementById('close-share-btn')?.addEventListener('click', () => {
+        document.getElementById('share-lookbook-section')?.classList.add('hidden');
+    });
+
+    // Copy Link
+    document.getElementById('copy-link-btn')?.addEventListener('click', () => {
+        navigator.clipboard.writeText('https://fitly.app/share/x839z'); // Mock link
+        showToast('Link copied to clipboard!', 'success');
+    });
+
+    // Download Lookbook
+    document.getElementById('download-final-btn')?.addEventListener('click', () => {
+        downloadLookbookCard();
+    });
+}
+
+function openShareLookbook() {
+    const section = document.getElementById('share-lookbook-section');
+    const container = document.getElementById('lookbook-images');
+    
+    if (!section || !container) return;
+
+    // Get selected results or default to latest
+    let selectedResults = [];
+    if (state.selectedResultIds && state.selectedResultIds.length > 0) {
+        selectedResults = state.results.filter(r => state.selectedResultIds.includes(r.id));
+    } else if (state.results.length > 0) {
+        selectedResults = [state.results[0]];
+    }
+
+    if (selectedResults.length === 0) {
+        showToast('No outfits to share', 'warning');
+        return;
+    }
+
+    // Render Images
+    container.innerHTML = selectedResults.map((result, index) => `
+        <div class="lookbook-image-wrapper">
+            <img src="${result.imageUrl}" class="lookbook-image" alt="Outfit">
+            <div class="lookbook-option-label">OPTION ${String.fromCharCode(65 + index)}</div>
+        </div>
+    `).join('');
+
+    // Reset Caption if needed or keep user edit
+    // const caption = document.getElementById('lookbook-caption');
+    // if (caption && caption.textContent.trim() === '') {
+    //     caption.textContent = "Help me choose the perfect fit for tonight's gala ✨";
+    // }
+
+    section.classList.remove('hidden');
+}
+
+async function downloadLookbookCard() {
+    const card = document.getElementById('lookbook-card');
+    if (!card) return;
+
+    showToast('Preparing lookbook...', 'info');
+
+    try {
+        // Use html2canvas or similar if available, otherwise mock download source images
+        // Since we can't easily add libraries, we'll try to download the source images merged
+        // For now, let's just download the first image as a fallback demo
+        const img = card.querySelector('img');
+        if (img) {
+            const link = document.createElement('a');
+            link.href = img.src;
+            link.download = 'my-lookbook.png';
+            link.click();
+            showToast('Lookbook downloaded!', 'success');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Could not download lookbook', 'error');
+    }
+}
+
+// Add init call
+initShareLookbookEvents();
+
+function renderResultThumbnails() {
+    // Legacy function redirect
+    updateGalleryUI();
 }
 
 // Helper function to escape HTML
@@ -909,6 +1261,7 @@ function addResult(imageUrl, clothingUrl, modelUrl, sourceUrl = null) {
     };
 
     state.results.unshift(result); // Add to beginning
+    saveResults(); // Persist changes
     state.resultImage = imageUrl; // Keep for backward compatibility
     state.currentResultId = result.id; // Track current result for inline actions
 
@@ -920,7 +1273,7 @@ function addResult(imageUrl, clothingUrl, modelUrl, sourceUrl = null) {
     openResultPopup(result.id);
 
     // Update thumbnails
-    updateResultsUI();
+    updateGalleryUI();
 
     return result;
 }
@@ -1255,8 +1608,9 @@ function deleteResult(id) {
 
     // Remove from results
     state.results = state.results.filter(r => r.id !== id);
+    saveResults(); // Persist changes
 
-    updateResultsUI();
+    updateGalleryUI();
     showToast(t('result_deleted'), 'success');
 }
 
@@ -1270,7 +1624,7 @@ function clearAllResults() {
     state.results = [];
     state.resultImage = null;
 
-    updateResultsUI();
+    updateGalleryUI();
     showToast(t('all_results_deleted'), 'success');
 }
 
@@ -1547,13 +1901,23 @@ function showLoading(show, text = null) {
     }
 
     if (show) {
-        // Start rotating messages
-        loadingMessageIndex = 0;
-        updateLoadingMessage();
-        loadingMessageInterval = setInterval(() => {
-            loadingMessageIndex++;
+        // If specific text provided, show it and don't rotate
+        if (text && elements.loadingText) {
+            elements.loadingText.textContent = text;
+            // Clear any existing interval
+            if (loadingMessageInterval) {
+                clearInterval(loadingMessageInterval);
+                loadingMessageInterval = null;
+            }
+        } else {
+            // Start rotating messages
+            loadingMessageIndex = 0;
             updateLoadingMessage();
-        }, 2500);
+            loadingMessageInterval = setInterval(() => {
+                loadingMessageIndex++;
+                updateLoadingMessage();
+            }, 2500);
+        }
 
         // Update tip text based on locale
         const tipElement = document.getElementById('loading-tip');
@@ -1600,6 +1964,16 @@ function updateProgress(percent) {
     }
 }
 
+function showErrorOverlay(show, message = null) {
+    if (elements.errorOverlay) {
+        elements.errorOverlay.classList.toggle('hidden', !show);
+        
+        if (show && message && elements.errorMessageText) {
+            elements.errorMessageText.textContent = message;
+        }
+    }
+}
+
 function showToast(message, type = 'info') {
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
@@ -1614,55 +1988,170 @@ function showToast(message, type = 'info') {
 
 
 // ==========================================
+// AUTH ACTIONS
+// ==========================================
+
+async function handleSocialLogin(provider) {
+    console.log(`[Fitly] Social login with ${provider}`);
+    const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+    
+    showLoading(true, `Đang kết nối với ${providerName}...`);
+    
+    // Simulate API call / Popup delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Mock success
+    state.authenticated = true;
+    state.user = { 
+        email: `user@${provider}.com`,
+        user_metadata: {
+            display_name: `User ${providerName}`,
+            avatar_url: null
+        }
+    };
+    // Mock profile with random avatar
+    state.profile = { 
+        full_name: `Fitly User`, 
+        gems_balance: 50,
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`
+    };
+    state.gemsBalance = 50;
+    
+    showMainContent();
+    updateUI();
+    showLoading(false);
+    showToast(`Đăng nhập ${providerName} thành công!`, 'success');
+}
+
+async function handleLogout() {
+    if(!confirm('Bạn có chắc chắn muốn đăng xuất?')) return;
+    
+    showLoading(true, 'Đang đăng xuất...');
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    state.authenticated = false;
+    state.user = null;
+    state.profile = null;
+    state.gemsBalance = 0;
+    
+    showAuthSection();
+    updateUI();
+    showLoading(false);
+    showToast('Đã đăng xuất thành công', 'info');
+    
+    // Close profile menu if open
+    const profileMenu = document.getElementById('profile-menu');
+    if (profileMenu) profileMenu.classList.add('hidden');
+}
+
+// ==========================================
 // EVENT LISTENERS
 // ==========================================
 
 function setupEventListeners() {
-    // Login with Google - opens popup window (không dùng overlay vì hay bị CSP block)
-    elements.loginGoogleBtn?.addEventListener('click', async () => {
-        // Get server URL from service worker
-        let serverUrl;
-        try {
-            const response = await chrome.runtime.sendMessage({ type: 'GET_SERVER_URL' });
-            serverUrl = response.url;
-        } catch (error) {
-            serverUrl = 'http://localhost:3000'; // Fallback
-        }
-
-        // Ping server first to ensure it's running
-        try {
-            await fetch(`${serverUrl} /api/auth / me`, {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' },
-                cache: 'no-store',
-            }).catch(() => null);
-        } catch (error) { }
-
-        // Open popup window directly (more reliable than iframe overlay)
-        const popupUrl = `${serverUrl} /auth/popup`;
-        const popupWidth = 400;
-        const popupHeight = 600;
-        const left = Math.round((screen.width - popupWidth) / 2);
-        const top = Math.round((screen.height - popupHeight) / 2);
-
-        try {
-            await chrome.windows.create({
-                url: popupUrl,
-                type: 'popup',
-                width: popupWidth,
-                height: popupHeight,
-                left: left,
-                top: top,
-                focused: true
-            });
-            console.log('[Fitly] Login popup window opened');
-        } catch (winError) {
-            console.error('Failed to open popup window:', winError);
-            // Fallback: open as new tab
-            chrome.tabs.create({ url: popupUrl });
+    // Error Overlay Actions
+    elements.errorRetryBtn?.addEventListener('click', () => {
+        showErrorOverlay(false);
+        // Retry logic: if both images are present, retry
+        if (state.modelImage && state.clothingImage) {
+            quickTryClothing(state.clothingImage, state.clothingSourceUrl);
         }
     });
 
+    elements.errorCloseBtn?.addEventListener('click', () => {
+        showErrorOverlay(false);
+    });
+
+    // Login with Google - opens popup window (không dùng overlay vì hay bị CSP block)
+    elements.loginGoogleBtn?.addEventListener('click', async () => {
+        handleSocialLogin('google');
+    });
+
+    // Facebook & Apple buttons
+    document.querySelector('.social-btn.facebook')?.addEventListener('click', () => handleSocialLogin('facebook'));
+    document.querySelector('.social-btn.apple')?.addEventListener('click', () => handleSocialLogin('apple'));
+
+    // Auth Tabs Switching
+    const authTabs = document.querySelectorAll('.auth-tab');
+    authTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            authTabs.forEach(t => t.classList.remove('active'));
+            // Add active to clicked tab
+            tab.classList.add('active');
+
+            // Show corresponding form
+            const target = tab.dataset.tab; // 'login' or 'register'
+            document.getElementById('login-form').classList.toggle('hidden', target !== 'login');
+            document.getElementById('register-form').classList.toggle('hidden', target !== 'register');
+        });
+    });
+
+    // Profile Dropdown Toggle
+    elements.profileBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = document.getElementById('profile-menu');
+        menu?.classList.toggle('hidden');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const menu = document.getElementById('profile-menu');
+        const btn = document.getElementById('profile-btn');
+        if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !btn?.contains(e.target)) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    // Logout
+    document.getElementById('menu-logout')?.addEventListener('click', handleLogout);
+
+    // Password Toggle
+    document.querySelectorAll('.password-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const input = this.previousElementSibling;
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.textContent = 'visibility';
+            } else {
+                input.type = 'password';
+                this.textContent = 'visibility_off';
+            }
+        });
+    });
+
+    // Forgot Password
+    document.querySelector('.forgot-password')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showToast(t('check_email_reset'), 'info');
+    });
+
+    // Form Submissions (Mock)
+    document.querySelectorAll('.auth-form').forEach(form => {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            
+            btn.disabled = true;
+            btn.textContent = t('processing') + '...';
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = originalText;
+                // Mock login success
+                state.authenticated = true;
+                state.user = { email: 'user@example.com' };
+                state.profile = { full_name: 'Fitly User', gems_balance: 10 };
+                state.gemsBalance = 10;
+                showMainContent();
+                updateUI();
+                showToast(t('login_success'), 'success');
+            }, 1500);
+        });
+    });
 
     // Skip Login - use without signing in (demo/guest mode)
     const skipLoginBtn = document.getElementById('skip-login-btn');
@@ -1799,6 +2288,15 @@ function setupEventListeners() {
 
     // Clear all results
     elements.clearAllResults?.addEventListener('click', clearAllResults);
+
+    // Gallery / Collection View
+    document.getElementById('view-all-results-btn')?.addEventListener('click', () => {
+        openGallery();
+    });
+
+    document.getElementById('close-gallery-btn')?.addEventListener('click', () => {
+        closeGallery();
+    });
 
     // Clothing container click - chọn ảnh từ web
     elements.clothingImageContainer?.addEventListener('click', () => {
@@ -2734,7 +3232,8 @@ async function processTryOn(event) {
                     console.error('[Fitly] Refund request failed:', refundError);
                 }
 
-                showToast(`❌ ${imageValidation.error} `, 'error');
+                // Show Anime Error Overlay instead of just toast
+                showErrorOverlay(true, imageValidation.error);
                 updateUI();
                 return;
             }
@@ -2755,7 +3254,7 @@ async function processTryOn(event) {
             showToast(t('tryon_success_popup'), 'success');
         } else {
             const errorMessage = response.error || t('error_occurred');
-            showToast(errorMessage, 'error');
+            console.error('Try-on failed:', errorMessage);
 
             // If gems were refunded, show that message
             if (errorMessage.includes('hoàn lại')) {
@@ -2766,10 +3265,12 @@ async function processTryOn(event) {
                     updateUI();
                 }
             }
+            
+            showErrorOverlay(true, errorMessage);
         }
     } catch (error) {
         console.error('Try-on error:', error);
-        showToast(t('processing_error'), 'error');
+        showErrorOverlay(true, t('processing_error'));
     } finally {
         showLoading(false);
     }
@@ -3072,8 +3573,14 @@ function updateUIStrings() {
 
     const modelPlaceholder = document.getElementById('model-placeholder');
     if (modelPlaceholder) {
-        const span = modelPlaceholder.querySelector('span');
-        if (span) span.textContent = t('select_below');
+        const label = modelPlaceholder.querySelector('.empty-label');
+        const instruction = modelPlaceholder.querySelector('.empty-instruction');
+        // Check if translations exist, otherwise use meaningful defaults
+        const addPhotoText = t('add_photo_caps') === 'add_photo_caps' ? 'THÊM ẢNH' : t('add_photo_caps');
+        const hintText = t('full_body_photo_hint') === 'full_body_photo_hint' ? 'Ảnh toàn thân • Rõ nét • Max 10MB' : t('full_body_photo_hint');
+        
+        if (label) label.textContent = addPhotoText;
+        if (instruction) instruction.textContent = hintText;
     }
 
     const clothingPlaceholder = document.getElementById('clothing-placeholder');
@@ -3093,12 +3600,13 @@ function updateUIStrings() {
     });
 
     // =====================================
-    // CLEAR BUTTONS
+    // CLEAR BUTTONS - Use Icon
     // =====================================
 
     const clearBtns = document.querySelectorAll('.clear-btn');
     clearBtns.forEach(btn => {
-        btn.textContent = t('clear_all');
+        btn.innerHTML = '<span class="material-symbols-outlined">delete_sweep</span>';
+        btn.title = t('clear_all'); // Add tooltip for accessibility
     });
 
     // =====================================
@@ -3132,7 +3640,7 @@ function updateUIStrings() {
 
     const gemsPanelSubtitle = document.querySelector('.gems-panel-subtitle');
     if (gemsPanelSubtitle) {
-        gemsPanelSubtitle.innerHTML = `${t('balance')}: <span id="gems-panel-balance">${state.gemsBalance}</span> gems`;
+        gemsPanelSubtitle.innerHTML = `${t('balance')}: <span id="gems-panel-balance">${state.gemsBalance}</span> <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: text-bottom; color: #29b6f6;">diamond</span>`;
     }
 
     const gemsPanelNote = document.querySelector('.gems-panel-note');
@@ -3384,25 +3892,36 @@ async function updateProfileMenuContent() {
     const username = document.getElementById('menu-username');
     const email = document.getElementById('menu-email');
     const cacheSize = document.getElementById('menu-cache-size');
+    const currentLangCode = document.getElementById('current-lang-code');
 
-    // Avatar
+    // Avatar & User Info
+    const avatarUrl = state.profile?.avatar_url;
+    const displayName = state.profile?.full_name || state.user?.email || 'Guest';
+    const initial = displayName.charAt(0).toUpperCase();
+
+    // Update Avatar
     if (avatar) {
-        const avatarUrl = state.profile?.avatar_url;
-        const displayName = state.profile?.full_name || state.user?.email || 'U';
-
-        if (avatarUrl) {
-            avatar.innerHTML = `<img src="${avatarUrl}" alt="Avatar" onerror="this.style.display='none'">`;
+        if (state.authenticated && avatarUrl) {
+            avatar.innerHTML = `<img src="${avatarUrl}" alt="Avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: linear-gradient(135deg, #f97316, #ec4899); color: white;">${initial}</div>`;
         } else {
-            avatar.textContent = displayName.charAt(0).toUpperCase();
+            avatar.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: ${state.authenticated ? 'linear-gradient(135deg, #f97316, #ec4899)' : '#eee'}; color: ${state.authenticated ? 'white' : '#999'};">
+                                    ${state.authenticated ? initial : '<span class="material-symbols-outlined">person</span>'}
+                                </div>`;
         }
     }
 
-    // Username & Email
+    // Update Text Info
     if (username) {
-        username.textContent = state.profile?.full_name || state.profile?.display_name || t('guest');
+        username.textContent = state.authenticated ? (state.profile?.full_name || state.user?.email?.split('@')[0]) : t('guest');
     }
     if (email) {
-        email.textContent = state.user?.email || (state.authenticated ? '' : t('not_signed_in'));
+        email.textContent = state.authenticated ? state.user?.email : t('not_signed_in');
+    }
+
+    // Current Language Code
+    if (currentLangCode) {
+        currentLangCode.textContent = state.locale.toUpperCase();
     }
 
     // Cache size
@@ -3417,17 +3936,25 @@ async function updateProfileMenuContent() {
 }
 
 function initProfileMenuEvents() {
-    // Menu items
+    // Language
+    document.getElementById('menu-language')?.addEventListener('click', () => {
+        toggleLanguagePanel();
+        hideProfileMenu();
+    });
+
+    // Web App
     document.getElementById('menu-webapp')?.addEventListener('click', () => {
         chrome.tabs.create({ url: 'http://localhost:3000' });
         hideProfileMenu();
     });
 
+    // Wardrobe
     document.getElementById('menu-wardrobe')?.addEventListener('click', () => {
         chrome.tabs.create({ url: 'http://localhost:3000/wardrobe' });
         hideProfileMenu();
     });
 
+    // Cache Settings
     document.getElementById('menu-cache-settings')?.addEventListener('click', async () => {
         if (!window.imageCache) return;
         const stats = await window.imageCache.getCacheStats();
@@ -3442,11 +3969,19 @@ function initProfileMenuEvents() {
         hideProfileMenu();
     });
 
+    // Help
     document.getElementById('menu-help')?.addEventListener('click', () => {
         chrome.tabs.create({ url: 'http://localhost:3000/help' });
         hideProfileMenu();
     });
 
+    // Gems Shortcut
+    document.getElementById('menu-credits')?.addEventListener('click', () => {
+        toggleGemsPanel();
+        hideProfileMenu();
+    });
+
+    // Logout
     document.getElementById('menu-logout')?.addEventListener('click', async () => {
         hideProfileMenu();
         try {
