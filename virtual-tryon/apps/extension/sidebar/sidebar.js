@@ -23,6 +23,7 @@ let state = {
     gemsBalance: 0,
     modelImage: null,
     clothingImage: null,
+    selectedItems: [], // Array of { id, imageUrl, name, category }
     clothingSourceUrl: null, // URL of the product page where clothing was captured
     resultImage: null,
     isProcessing: false,
@@ -88,6 +89,7 @@ function getTimeAgo(timestamp) {
 // Config
 const GEM_COST_STANDARD = 1;
 const GEM_COST_HD = 2;
+const MAX_SELECTED_ITEMS = 4;
 
 // DOM Elements
 const $ = (id) => document.getElementById(id);
@@ -117,6 +119,7 @@ const elements = {
     clothingImageContainer: $('clothing-image-container'),
     clothingImage: $('clothing-image'),
     clothingPlaceholder: $('clothing-placeholder'),
+    selectedItemsBubbles: $('selected-items-bubbles'),
     pasteUrlBtn: $('paste-url-btn'),
 
     // Try-on
@@ -147,6 +150,38 @@ const elements = {
     // Recent clothing (will be added dynamically)
     recentClothingSection: null,
 };
+
+// ==========================================
+// SELECTION HELPERS
+// ==========================================
+
+function toggleClothingSelection(item) {
+    const index = state.selectedItems.findIndex(i => i.imageUrl === item.imageUrl);
+
+    if (index > -1) {
+        state.selectedItems.splice(index, 1);
+        showToast('Đã bỏ chọn', 'info');
+    } else {
+        if (state.selectedItems.length >= MAX_SELECTED_ITEMS) {
+            showToast(`Tối đa ${MAX_SELECTED_ITEMS} món đồ`, 'warning');
+            return false;
+        }
+        state.selectedItems.push(item);
+        showToast('Đã chọn món đồ', 'success');
+    }
+
+    // Sync legacy state
+    state.clothingImage = state.selectedItems.length > 0
+        ? state.selectedItems[state.selectedItems.length - 1].imageUrl
+        : null;
+    state.clothingSourceUrl = state.selectedItems.length > 0
+        ? state.selectedItems[state.selectedItems.length - 1].sourceUrl
+        : null;
+
+    updateUI();
+    renderClothingHistory(); // Refresh carousel to update checkmarks
+    return true;
+}
 
 // ==========================================
 // INIT
@@ -263,7 +298,12 @@ async function loadUserModels() {
     try {
         const response = await chrome.runtime.sendMessage({ type: 'GET_USER_MODELS' });
         if (response?.success) {
-            state.userModels = response.models || [];
+            // Standardize model objects
+            state.userModels = (response.models || []).map(m => ({
+                id: m.id,
+                imageUrl: m.url || m.imageUrl,
+                url: m.url || m.imageUrl
+            }));
             state.defaultModelId = response.defaultModelId;
             renderUserModels();
 
@@ -283,40 +323,20 @@ async function loadUserModels() {
 
 function renderUserModels() {
     const grid = document.getElementById('user-models-grid');
-    const countEl = document.getElementById('models-count');
 
     if (!grid) return;
 
-    // Update count
-    if (countEl) {
-        countEl.textContent = `${state.userModels.length}/10`;
-    }
-
     let html = '';
 
-    // Render numbered items
+    // Render items
     html += state.userModels.map((item, index) => {
-        const isSelected = state.modelImage === item.imageUrl;
-        // Use index + 1 as the number
-        const number = index + 1;
+        const isSelected = state.selectedModelId === item.id;
 
         return `
             <div class="user-model-item ${isSelected ? 'selected' : ''}" 
                  data-id="${item.id}" 
-                 data-url="${item.imageUrl}"
-                 title="Ảnh ${number}">
-                 
-                <!-- Number Badge -->
-                <div class="number-badge">${number}</div>
-                
-                ${isSelected ? `
-                <!-- Check Badge -->
-                <div class="check-badge">
-                    <span class="material-symbols-outlined">check</span>
-                </div>
-                ` : ''}
-                
-                <img src="${item.imageUrl}" alt="Model ${number}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
+                 data-url="${item.imageUrl}">
+                <img src="${item.imageUrl}" alt="Model ${index + 1}">
             </div>
         `;
     }).join('');
@@ -336,11 +356,17 @@ function renderUserModels() {
             const id = item.dataset.id;
             const url = item.dataset.url;
 
-            state.modelImage = url;
-            state.selectedModelId = id;
+            // Toggle selection: if already selected, clear it. Otherwise select it.
+            if (state.selectedModelId === id) {
+                state.modelImage = null;
+                state.selectedModelId = null;
+            } else {
+                state.modelImage = url;
+                state.selectedModelId = id;
+            }
 
             // Update selected state visually
-            renderUserModels(); // Re-render to update badges
+            renderUserModels(); // Re-render to update badges/selected class
             updateUI(); // Update main preview
         });
     });
@@ -569,11 +595,11 @@ function renderClothingHistory() {
     }
 
     grid.innerHTML = state.recentClothing.map(item => {
-        const isSelected = state.clothingImage === item.imageUrl;
+        const isSelected = state.selectedItems.some(i => i.imageUrl === item.imageUrl);
         const isSaved = item.saved;
         const hasSourceUrl = item.sourceUrl && item.sourceUrl.startsWith('http');
         const isLocalUpload = item.sourceType === 'local_upload';
-        
+
         // Determine label (FRONT/SIDE/etc) based on analysis or random for demo
         const poseLabel = item.name || item.pose || 'FRONT';
 
@@ -621,16 +647,15 @@ function renderClothingHistory() {
 
             const url = item.dataset.url;
             const sourceUrl = item.dataset.sourceUrl;
+            const id = item.dataset.id;
+            const name = item.querySelector('.thumbnail-label')?.textContent || 'Item';
 
-            state.clothingImage = url;
-            state.clothingSourceUrl = sourceUrl || null; // Save source URL for later use
-
-            // Update selected state
-            grid.querySelectorAll('.clothing-history-item').forEach(i => i.classList.remove('selected'));
-            item.classList.add('selected');
-
-            updateUI();
-            showToast(t('clothing_selected'), 'success');
+            toggleClothingSelection({
+                id: id || `item-${Date.now()}`,
+                imageUrl: url,
+                name: name,
+                sourceUrl: sourceUrl
+            });
         });
 
         // Action buttons
@@ -702,14 +727,23 @@ async function saveClothingToWardrobe(imageUrl) {
 
 // Quick try - immediately start try-on
 async function quickTryClothing(imageUrl, sourceUrl = null) {
-    state.clothingImage = imageUrl;
-    state.clothingSourceUrl = sourceUrl || null;
-    updateUI();
+    // Ensure it's selected
+    const isSelected = state.selectedItems.some(i => i.imageUrl === imageUrl);
+    if (!isSelected) {
+        // If not selected, try to select it
+        const success = toggleClothingSelection({
+            id: `quick-${Date.now()}`,
+            imageUrl: imageUrl,
+            name: 'Quick Try Item',
+            sourceUrl: sourceUrl
+        });
+        if (!success) return;
+    }
 
     // Auto-start try-on if model is ready
     if (state.modelImage) {
         if (state.gemsBalance >= GEM_COST_STANDARD) {
-            showToast(t('trying_on'), 'info');
+            showToast('Đang xử lý thử đồ...', 'info');
             await processTryOn();
         } else {
             showToast(t('not_enough_gems'), 'error');
@@ -843,7 +877,7 @@ function updateUI() {
         const avatarUrl = state.profile?.avatar_url;
         const displayName = state.profile?.full_name || state.user?.email?.split('@')[0] || 'Guest';
         const initial = displayName.charAt(0).toUpperCase();
-        
+
         // Greeting based on time
         const hour = new Date().getHours();
         let greeting = 'GOOD MORNING';
@@ -852,7 +886,7 @@ function updateUI() {
 
         // Badge content (using flag based on locale)
         const flags = {
-            'vi': '🇻🇳', 'en': '🇺🇸', 'ja': '🇯🇵', 'ko': '🇰🇷', 
+            'vi': '🇻🇳', 'en': '🇺🇸', 'ja': '🇯🇵', 'ko': '🇰🇷',
             'zh': '🇨🇳', 'th': '🇹🇭', 'id': '🇮🇩', 'es': '🇪🇸', 'fr': '🇫🇷'
         };
         const flag = flags[state.locale] || '🇻🇳';
@@ -907,14 +941,14 @@ function updateUI() {
         elements.modelImage.classList.remove('hidden');
         elements.modelPlaceholder?.classList.add('hidden');
         elements.modelImageContainer?.classList.add('has-image');
-        
+
         // Show delete button
         if (deleteBtn) deleteBtn.classList.remove('hidden');
     } else if (elements.modelImage) {
         elements.modelImage.classList.add('hidden');
         elements.modelPlaceholder?.classList.remove('hidden');
         elements.modelImageContainer?.classList.remove('has-image');
-        
+
         // Hide delete button
         if (deleteBtn) deleteBtn.classList.add('hidden');
     }
@@ -928,9 +962,9 @@ function updateUI() {
         });
     }
 
-    // Update clothing image
-    if (state.clothingImage && elements.clothingImage) {
-        elements.clothingImage.src = state.clothingImage;
+    // Update clothing image (Show the first selected item as the main preview)
+    if (state.selectedItems.length > 0 && elements.clothingImage) {
+        elements.clothingImage.src = state.selectedItems[0].imageUrl;
         elements.clothingImage.classList.remove('hidden');
         elements.clothingPlaceholder?.classList.add('hidden');
         elements.clothingImageContainer?.classList.add('has-image');
@@ -940,15 +974,21 @@ function updateUI() {
         elements.clothingImageContainer?.classList.remove('has-image');
     }
 
+    // Render bubbles for all selected items
+    renderSelectedBubbles();
+
     // Update try-on button
-    const canTryOn = state.modelImage && state.clothingImage && state.gemsBalance >= GEM_COST_STANDARD;
+    const itemCount = state.selectedItems.length;
+    const canTryOn = state.modelImage && itemCount > 0 && state.gemsBalance >= GEM_COST_STANDARD;
     if (elements.tryOnBtn) {
         elements.tryOnBtn.disabled = !canTryOn || state.isProcessing;
 
-        // Update button text with tries remaining
+        // Update button text with count and tries remaining
         const triesRemaining = Math.floor(state.gemsBalance / GEM_COST_STANDARD);
-        if (state.modelImage && state.clothingImage && state.gemsBalance < GEM_COST_STANDARD) {
+        if (state.modelImage && itemCount > 0 && state.gemsBalance < GEM_COST_STANDARD) {
             elements.tryOnBtn.innerHTML = '💎 Cần thêm gems';
+        } else if (itemCount > 0) {
+            elements.tryOnBtn.innerHTML = `✨ Thử ${itemCount} món ngay <span class="gem-cost">(còn ${triesRemaining} lần)</span>`;
         } else {
             elements.tryOnBtn.innerHTML = `✨ Thử đồ ngay <span class="gem-cost">(còn ${triesRemaining} lần)</span>`;
         }
@@ -970,17 +1010,17 @@ function updateGalleryUI() {
             { id: 103, name: 'Gala Evening', imageUrl: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 172800000, matchPercentage: 99, isFeatured: true },
             { id: 104, name: 'City Walker', imageUrl: 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', timestamp: Date.now() - 259200000, matchPercentage: 88, isFeatured: false }
         ];
-        
+
         container.innerHTML = mockResults.map((result, index) => {
-             const isSelected = state.selectedResultIds?.includes(result.id);
-             // Default first one selected for demo
-             if (index === 0 && (!state.selectedResultIds || state.selectedResultIds.length === 0)) {
-                 // isSelected = true; 
-             }
-             
-             return renderGalleryCard(result, isSelected);
+            const isSelected = state.selectedResultIds?.includes(result.id);
+            // Default first one selected for demo
+            if (index === 0 && (!state.selectedResultIds || state.selectedResultIds.length === 0)) {
+                // isSelected = true; 
+            }
+
+            return renderGalleryCard(result, isSelected);
         }).join('');
-        
+
         // Add listeners for mock data
         addGalleryCardListeners(container, true);
         return;
@@ -996,6 +1036,42 @@ function updateGalleryUI() {
 
     // Update sticky action bar visibility and text
     updateStickyActionBar();
+}
+
+
+function renderSelectedBubbles() {
+    const container = elements.selectedItemsBubbles;
+    if (!container) return;
+
+    if (state.selectedItems.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = state.selectedItems.map((item, index) => {
+        return `
+            <div class="selected-item-bubble" data-index="${index}" style="animation-delay: ${index * 0.1}s">
+                <div class="bubble-image-wrapper">
+                    <img src="${item.imageUrl}" alt="${item.name}">
+                </div>
+                <button class="bubble-remove-btn" data-index="${index}" title="Bỏ chọn">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+                <div class="bubble-label">${item.name}</div>
+            </div>
+        `;
+    }).join('');
+
+    // Add remove listeners
+    container.querySelectorAll('.bubble-remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index);
+            if (!isNaN(index) && state.selectedItems[index]) {
+                toggleClothingSelection(state.selectedItems[index]);
+            }
+        });
+    });
 }
 
 function renderGalleryCard(result, isSelected) {
@@ -1049,7 +1125,7 @@ function addGalleryCardListeners(container, isMock) {
         // Open popup (Swap)
         card.querySelector('[data-action="open"]').addEventListener('click', (e) => {
             e.stopPropagation();
-            if(isMock) {
+            if (isMock) {
                 showToast("Opening swap view...", "info");
             } else {
                 openResultPopup(id);
@@ -1068,7 +1144,7 @@ function addGalleryCardListeners(container, isMock) {
                 }
             }
         });
-        
+
         // Click on image
         card.querySelector('.gallery-card-image-wrapper').addEventListener('click', (e) => {
             if (!e.target.closest('.card-select-check')) {
@@ -1084,7 +1160,7 @@ function updateStickyActionBar() {
 
     const selectedCount = state.selectedResultIds?.length || 0;
     const shareBtn = document.getElementById('share-friends-btn');
-    
+
     if (selectedCount > 0) {
         stickyBar.classList.remove('hidden');
         if (shareBtn) {
@@ -1101,7 +1177,7 @@ function updateStickyActionBar() {
 
 function toggleResultSelection(id) {
     if (!state.selectedResultIds) state.selectedResultIds = [];
-    
+
     const index = state.selectedResultIds.indexOf(id);
     if (index === -1) {
         // Limit selection to 2 for comparison share
@@ -1145,7 +1221,7 @@ function initShareLookbookEvents() {
 function openShareLookbook() {
     const section = document.getElementById('share-lookbook-section');
     const container = document.getElementById('lookbook-images');
-    
+
     if (!section || !container) return;
 
     // Get selected results or default to latest
@@ -1269,7 +1345,7 @@ function addResult(imageUrl, clothingUrl, modelUrl, sourceUrl = null) {
     // Multiple popups can be opened side-by-side for outfit comparison
     // openResultPopup(result.id);
     showSuccessOverlay(true, 'Thử đồ thành công! ✨');
-    
+
     // Auto hide success overlay after 2 seconds
     setTimeout(() => {
         showSuccessOverlay(false);
@@ -1972,7 +2048,7 @@ function updateProgress(percent) {
 function showErrorOverlay(show, message = null) {
     if (elements.errorOverlay) {
         elements.errorOverlay.classList.toggle('hidden', !show);
-        
+
         if (show && message && elements.errorMessageText) {
             elements.errorMessageText.textContent = message;
         }
@@ -1982,7 +2058,7 @@ function showErrorOverlay(show, message = null) {
 function showSuccessOverlay(show, message = null) {
     if (elements.successOverlay) {
         elements.successOverlay.classList.toggle('hidden', !show);
-        
+
         if (show && message && elements.successMessageText) {
             elements.successMessageText.textContent = message;
         }
@@ -2009,15 +2085,15 @@ function showToast(message, type = 'info') {
 async function handleSocialLogin(provider) {
     console.log(`[Fitly] Social login with ${provider}`);
     const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
-    
+
     showLoading(true, `Đang kết nối với ${providerName}...`);
-    
+
     // Simulate API call / Popup delay
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     // Mock success
     state.authenticated = true;
-    state.user = { 
+    state.user = {
         email: `user@${provider}.com`,
         user_metadata: {
             display_name: `User ${providerName}`,
@@ -2025,13 +2101,13 @@ async function handleSocialLogin(provider) {
         }
     };
     // Mock profile with random avatar
-    state.profile = { 
-        full_name: `Fitly User`, 
+    state.profile = {
+        full_name: `Fitly User`,
         gems_balance: 50,
         avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${provider}`
     };
     state.gemsBalance = 50;
-    
+
     showMainContent();
     updateUI();
     showLoading(false);
@@ -2039,23 +2115,23 @@ async function handleSocialLogin(provider) {
 }
 
 async function handleLogout() {
-    if(!confirm('Bạn có chắc chắn muốn đăng xuất?')) return;
-    
+    if (!confirm('Bạn có chắc chắn muốn đăng xuất?')) return;
+
     showLoading(true, 'Đang đăng xuất...');
-    
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     state.authenticated = false;
     state.user = null;
     state.profile = null;
     state.gemsBalance = 0;
-    
+
     showAuthSection();
     updateUI();
     showLoading(false);
     showToast('Đã đăng xuất thành công', 'info');
-    
+
     // Close profile menu if open
     const profileMenu = document.getElementById('profile-menu');
     if (profileMenu) profileMenu.classList.add('hidden');
@@ -2113,7 +2189,7 @@ function setupEventListeners() {
 
     // Password Toggle
     document.querySelectorAll('.password-toggle').forEach(toggle => {
-        toggle.addEventListener('click', function() {
+        toggle.addEventListener('click', function () {
             const input = this.previousElementSibling;
             if (input.type === 'password') {
                 input.type = 'text';
@@ -2137,7 +2213,7 @@ function setupEventListeners() {
             e.preventDefault();
             const btn = form.querySelector('button[type="submit"]');
             const originalText = btn.textContent;
-            
+
             btn.disabled = true;
             btn.textContent = t('processing') + '...';
 
@@ -2246,17 +2322,16 @@ function setupEventListeners() {
         }
     });
 
-    // Delete model button
+    // Clear model button (Close/Unset)
     const deleteModelBtn = document.getElementById('delete-model-btn');
-    deleteModelBtn?.addEventListener('click', async (e) => {
+    deleteModelBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (state.selectedModelId) {
-            await deleteUserModel(state.selectedModelId);
-        } else {
-            // Just clear current view if no ID
-            state.modelImage = null;
-            updateUI();
-        }
+        // Just clear current selection/view
+        state.modelImage = null;
+        state.selectedModelId = null;
+
+        renderUserModels(); // Update thumbnails state
+        updateUI();
     });
 
     // Handle model image upload
@@ -2284,8 +2359,7 @@ function setupEventListeners() {
             const added = await addUserModel(imageUrl, 'upload');
 
             if (added) {
-                state.modelImage = imageUrl;
-                updateUI();
+                // addUserModel calls loadUserModels -> renderUserModels -> updateUI
                 showToast(t('photo_added_success'), 'success');
             }
         };
@@ -2319,14 +2393,15 @@ function setupEventListeners() {
 
     // Clothing container click - chọn ảnh từ web
     elements.clothingImageContainer?.addEventListener('click', () => {
-        if (!state.clothingImage) {
+        if (state.selectedItems.length === 0) {
             startImageSelection();
         }
     });
 
     // Clear clothing image on double click when has image
     elements.clothingImageContainer?.addEventListener('dblclick', () => {
-        if (state.clothingImage) {
+        if (state.selectedItems.length > 0) {
+            state.selectedItems = [];
             state.clothingImage = null;
             updateUI();
             showToast(t('clothing_removed'));
@@ -3179,8 +3254,8 @@ async function validateTryOnResult(resultImageUrl) {
 // ==========================================
 
 async function processTryOn(event) {
-    if (!state.modelImage || !state.clothingImage) {
-        showToast(t('select_all_images'), 'error');
+    if (!state.modelImage || state.selectedItems.length === 0) {
+        showToast('Vui lòng chọn model và ít nhất 1 món đồ', 'error');
         return;
     }
 
@@ -3285,7 +3360,7 @@ async function processTryOn(event) {
                     updateUI();
                 }
             }
-            
+
             showErrorOverlay(true, errorMessage);
         }
     } catch (error) {
@@ -3311,9 +3386,12 @@ function listenForMessages() {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         switch (message.type) {
             case 'IMAGE_SELECTED':
-                state.clothingImage = message.imageUrl;
-                updateUI();
-                showToast(t('clothing_photo_selected'), 'success');
+                toggleClothingSelection({
+                    id: `capture-${Date.now()}`,
+                    imageUrl: message.imageUrl,
+                    name: 'Captured Item',
+                    sourceUrl: message.sourceUrl || null
+                });
                 break;
 
             case 'AUTH_STATE_CHANGED':
@@ -3610,7 +3688,7 @@ function updateUIStrings() {
         // Check if translations exist, otherwise use meaningful defaults
         const addPhotoText = t('add_photo_caps') === 'add_photo_caps' ? 'THÊM ẢNH' : t('add_photo_caps');
         const hintText = t('full_body_photo_hint') === 'full_body_photo_hint' ? 'Ảnh toàn thân • Rõ nét • Max 10MB' : t('full_body_photo_hint');
-        
+
         if (label) label.textContent = addPhotoText;
         if (instruction) instruction.textContent = hintText;
     }
@@ -3886,7 +3964,7 @@ function toggleProfileMenu() {
     const menu = document.getElementById('profile-menu');
     const gemsPanel = document.getElementById('gems-panel');
     const languagePanel = document.getElementById('language-panel');
-    
+
     if (!menu) return;
 
     // Close other panels
@@ -3953,6 +4031,17 @@ async function updateProfileMenuContent() {
         }
     }
 
+    // Flag Mapping
+    const langFlags = {
+        vi: '🇻🇳',
+        en: '🇺🇸',
+        ja: '🇯🇵',
+        ko: '🇰🇷',
+        zh: '🇨🇳',
+        th: '🇹🇭',
+        id: '🇮🇩'
+    };
+
     // Update Text Info
     if (username) {
         username.textContent = state.authenticated ? (state.profile?.full_name || state.user?.email?.split('@')[0]) : t('guest');
@@ -3961,13 +4050,25 @@ async function updateProfileMenuContent() {
         email.textContent = state.authenticated ? state.user?.email : t('not_signed_in');
     }
 
-    // Current Language Code
+    // Current Language Flag
     if (currentLangCode) {
-        currentLangCode.textContent = state.locale.toUpperCase();
+        currentLangCode.textContent = langFlags[state.locale] || state.locale.toUpperCase();
+        currentLangCode.style.fontSize = '20px';
     }
 
+    // Toggle Menu Items based on Auth State
+    document.querySelectorAll('.auth-only').forEach(el => {
+        el.style.display = state.authenticated ? 'flex' : 'none';
+        if (el.tagName === 'DIV' && el.classList.contains('profile-menu-spacer')) {
+            el.style.display = state.authenticated ? 'block' : 'none';
+        }
+    });
+    document.querySelectorAll('.guest-only').forEach(el => {
+        el.style.display = state.authenticated ? 'none' : 'flex';
+    });
+
     // Cache size
-    if (cacheSize && window.imageCache) {
+    if (cacheSize && window.imageCache && state.authenticated) {
         try {
             const stats = await window.imageCache.getCacheStats();
             cacheSize.textContent = `${stats.totalSizeMB} MB`;
@@ -4038,6 +4139,19 @@ function initProfileMenuEvents() {
             showToast(t('logout_error'), 'error');
         }
     });
+
+    // Login (Guest Only)
+    document.getElementById('menu-login')?.addEventListener('click', () => {
+        hideProfileMenu();
+        // Show login section
+        if (typeof showAuthSection === 'function') {
+            showAuthSection(true);
+        } else {
+            // Fallback: manually update UI if showAuthSection doesn't exist/work
+            state.authenticated = false;
+            updateUI();
+        }
+    });
 }
 
 // ==========================================
@@ -4062,30 +4176,30 @@ if (window.imageCache) {
 async function renderCreatedOutfitsList() {
     const listContainer = document.getElementById('created-outfits-list');
     const section = document.getElementById('created-outfits-list-section');
-    
+
     if (!listContainer || !section) return;
 
     try {
         // Get outfits from service worker
         const response = await chrome.runtime.sendMessage({ type: 'GET_OUTFITS', data: { limit: 12 } });
-        
+
         if (response && response.success && response.outfits && response.outfits.length > 0) {
             section.classList.remove('hidden');
             listContainer.innerHTML = '';
-            
+
             response.outfits.forEach(outfit => {
                 const itemWrapper = document.createElement('div');
                 itemWrapper.className = 'image-container has-image';
                 itemWrapper.style.cursor = 'pointer';
                 itemWrapper.title = outfit.name || 'Outfit';
-                
+
                 const img = document.createElement('img');
                 img.src = outfit.result_image_url;
                 img.className = 'preview-image';
                 img.alt = outfit.name;
-                
+
                 itemWrapper.appendChild(img);
-                
+
                 // Click to view
                 itemWrapper.onclick = () => {
                     showResultInline({
@@ -4094,7 +4208,7 @@ async function renderCreatedOutfitsList() {
                         name: outfit.name
                     });
                 };
-                
+
                 listContainer.appendChild(itemWrapper);
             });
         } else {

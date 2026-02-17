@@ -7,7 +7,9 @@
     <title>Fitly - Virtual Try-On</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <link rel="stylesheet" href="sidebar.css?v=3">
 </head>
@@ -19,14 +21,16 @@
             <div class="logo">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                 </div>
                 <span class="logo-text">Fitly</span>
             </div>
-            
+
             <div class="header-actions">
                 <!-- Compact Gems Display -->
                 <button id="gems-display" class="gems-badge compact" title="Mua thêm gems">
@@ -39,7 +43,7 @@
                     <button id="profile-btn" class="profile-trigger" title="Tài khoản">
                         <!-- Content injected by JS -->
                     </button>
-                    
+
                     <!-- Expanded Profile Dropdown Menu -->
                     <div id="profile-menu" class="profile-dropdown hidden">
                         <!-- User Info Header -->
@@ -52,7 +56,7 @@
                                 <p id="menu-email" class="menu-email">Sign in to sync</p>
                             </div>
                         </div>
-                        
+
                         <div class="profile-menu-items">
                             <!-- Language -->
                             <button class="profile-menu-item" id="menu-language">
@@ -64,48 +68,54 @@
                             <div class="profile-menu-spacer"></div>
 
                             <!-- Wardrobe -->
-                            <button class="profile-menu-item" id="menu-wardrobe">
+                            <button class="profile-menu-item auth-only" id="menu-wardrobe">
                                 <span class="material-symbols-outlined menu-icon">checkroom</span>
                                 <span class="menu-item-text">Tủ đồ của tôi</span>
                             </button>
 
                             <!-- Gallery -->
-                            <button class="profile-menu-item" id="menu-gallery">
+                            <button class="profile-menu-item auth-only" id="menu-gallery">
                                 <span class="material-symbols-outlined menu-icon">collections</span>
                                 <span class="menu-item-text">Bộ sưu tập</span>
                             </button>
 
                             <!-- Web App -->
-                            <button class="profile-menu-item" id="menu-webapp">
+                            <button class="profile-menu-item auth-only" id="menu-webapp">
                                 <span class="material-symbols-outlined menu-icon">open_in_new</span>
                                 <span class="menu-item-text">Mở Web App</span>
                             </button>
 
                             <!-- Buy Gems Shortcut -->
-                            <button class="profile-menu-item" id="menu-credits">
+                            <button class="profile-menu-item auth-only" id="menu-credits">
                                 <span class="material-symbols-outlined menu-icon">diamond</span>
                                 <span class="menu-item-text">Mua thêm Gems</span>
                             </button>
-                            
+
                             <div class="profile-menu-spacer"></div>
 
                             <!-- Cache Settings -->
-                            <button class="profile-menu-item" id="menu-cache-settings">
+                            <button class="profile-menu-item auth-only" id="menu-cache-settings">
                                 <span class="material-symbols-outlined menu-icon">cleaning_services</span>
                                 <span class="menu-item-text">Xóa Cache</span>
                                 <span id="menu-cache-size" class="menu-item-value">0 MB</span>
                             </button>
-                            
+
                             <!-- Help -->
-                            <button class="profile-menu-item" id="menu-help">
+                            <button class="profile-menu-item auth-only" id="menu-help">
                                 <span class="material-symbols-outlined menu-icon">help</span>
                                 <span class="menu-item-text">Trợ giúp</span>
                             </button>
 
-                            <div class="profile-menu-spacer"></div>
+                            <div class="profile-menu-spacer auth-only"></div>
 
-                            <!-- Logout -->
-                            <button class="profile-menu-item text-danger" id="menu-logout">
+                            <!-- Login (Guest Only) -->
+                            <button class="profile-menu-item guest-only" id="menu-login">
+                                <span class="material-symbols-outlined menu-icon" style="color: #4caf50;">login</span>
+                                <span class="menu-item-text">Đăng nhập</span>
+                            </button>
+
+                            <!-- Logout (Auth Only) -->
+                            <button class="profile-menu-item auth-only text-danger" id="menu-logout">
                                 <span class="material-symbols-outlined menu-icon">logout</span>
                                 <span class="menu-item-text">Đăng xuất</span>
                             </button>
@@ -127,8 +137,9 @@
                 </button>
             </div>
             <p class="gems-panel-subtitle">
-                Số dư: <span id="gems-panel-balance">0</span> 
-                <span class="material-symbols-outlined" style="font-size: 16px; vertical-align: text-bottom; color: #29b6f6;">diamond</span>
+                Số dư: <span id="gems-panel-balance">0</span>
+                <span class="material-symbols-outlined"
+                    style="font-size: 16px; vertical-align: text-bottom; color: #29b6f6;">diamond</span>
             </p>
 
             <div class="gem-packages">
@@ -139,7 +150,8 @@
                     </div>
                     <div class="package-info">
                         <span class="package-name">Gói Khởi Đầu</span>
-                        <span class="package-gems">50 <span class="material-symbols-outlined" style="font-size: 14px; margin-left: 2px;">diamond</span></span>
+                        <span class="package-gems">50 <span class="material-symbols-outlined"
+                                style="font-size: 14px; margin-left: 2px;">diamond</span></span>
                     </div>
                     <span class="package-price">49.000 <small>đ</small></span>
                 </button>
@@ -154,7 +166,8 @@
                     </div>
                     <div class="package-info">
                         <span class="package-name">Gói Pro</span>
-                        <span class="package-gems">150 <span class="material-symbols-outlined" style="font-size: 14px; margin-left: 2px;">diamond</span></span>
+                        <span class="package-gems">150 <span class="material-symbols-outlined"
+                                style="font-size: 14px; margin-left: 2px;">diamond</span></span>
                     </div>
                     <span class="package-price">129.000 <small>đ</small></span>
                 </button>
@@ -166,7 +179,8 @@
                     </div>
                     <div class="package-info">
                         <span class="package-name">Gói Premium</span>
-                        <span class="package-gems">500 <span class="material-symbols-outlined" style="font-size: 14px; margin-left: 2px;">diamond</span></span>
+                        <span class="package-gems">500 <span class="material-symbols-outlined"
+                                style="font-size: 14px; margin-left: 2px;">diamond</span></span>
                     </div>
                     <span class="package-price">399.000 <small>đ</small></span>
                 </button>
@@ -236,12 +250,12 @@
                     <h3>Chào mừng trở lại! 👋</h3>
                     <p>Đăng nhập để đồng bộ tủ đồ của bạn</p>
                 </div>
-                
+
                 <div class="input-group">
                     <span class="material-symbols-outlined input-icon">mail</span>
                     <input type="email" id="login-email" placeholder="Email" autocomplete="email">
                 </div>
-                
+
                 <div class="input-group">
                     <span class="material-symbols-outlined input-icon">lock</span>
                     <input type="password" id="login-password" placeholder="Mật khẩu" autocomplete="current-password">
@@ -275,12 +289,12 @@
                     <span class="material-symbols-outlined input-icon">person</span>
                     <input type="text" id="register-name" placeholder="Họ và tên" autocomplete="name">
                 </div>
-                
+
                 <div class="input-group">
                     <span class="material-symbols-outlined input-icon">mail</span>
                     <input type="email" id="register-email" placeholder="Email" autocomplete="email">
                 </div>
-                
+
                 <div class="input-group">
                     <span class="material-symbols-outlined input-icon">lock</span>
                     <input type="password" id="register-password" placeholder="Mật khẩu" autocomplete="new-password">
@@ -288,7 +302,8 @@
 
                 <div class="input-group">
                     <span class="material-symbols-outlined input-icon">lock_reset</span>
-                    <input type="password" id="register-confirm-password" placeholder="Xác nhận mật khẩu" autocomplete="new-password">
+                    <input type="password" id="register-confirm-password" placeholder="Xác nhận mật khẩu"
+                        autocomplete="new-password">
                 </div>
 
                 <button id="register-submit-btn" class="btn btn-primary btn-full">
@@ -301,16 +316,15 @@
                 <span>Hoặc tiếp tục với</span>
             </div>
 
-            <!-- Social Buttons -->
             <div class="social-login-grid">
                 <button id="login-google-btn" class="social-btn google" title="Google">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
                 </button>
                 <button id="login-facebook-btn" class="social-btn facebook" title="Facebook">
                     <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" alt="Facebook">
                 </button>
                 <button id="login-apple-btn" class="social-btn apple" title="Apple">
-                    <img src="https://www.svgrepo.com/show/445136/apple.svg" alt="Apple">
+                    <img src="https://www.svgrepo.com/show/475631/apple-color.svg" alt="Apple">
                 </button>
             </div>
 
@@ -328,66 +342,66 @@
             </div>
 
             <!-- Model Section -->
-            <section class="section">
+            <!-- Model Section Redesigned -->
+            <section class="section model-redesign-section">
                 <div class="section-header">
-                    <h3>
-                        Ảnh mẫu toàn thân
-                    </h3>
-                    <button class="icon-btn-plain">
-                        <span class="material-symbols-outlined">more_horiz</span>
-                    </button>
+                    <h3>Ảnh mẫu toàn thân</h3>
                 </div>
-                <div id="model-image-container" class="image-container model-container dashed-border">
-                    <div id="model-placeholder" class="placeholder empty-state minimal">
-                        <div class="empty-icon-circle minimal">
-                            <span class="material-symbols-outlined">add_a_photo</span>
-                        </div>
-                        <span class="empty-label">THÊM ẢNH</span>
-                        <span class="empty-instruction">Ảnh toàn thân</span>
-                    </div>
-                    <div class="image-wrapper relative full-width full-height">
-                        <img id="model-image" class="preview-image hidden" alt="Model">
-                        <button id="delete-model-btn" class="delete-fab hidden">
-                            <span class="material-symbols-outlined">delete</span>
-                        </button>
-                    </div>
-                </div>
-                <input type="file" id="model-upload-input" accept="image/*" hidden>
 
-                <!-- User's Model Images Gallery -->
-                <div id="user-models-section" class="user-models-section">
-                    <div class="user-models-header">
-                        <p class="sample-label">LỊCH SỬ TẢI LÊN</p>
-                        <span id="models-count" class="models-count">0/10</span>
+                <div class="model-view-container">
+                    <!-- Main Model Display -->
+                    <div id="model-image-container" class="image-container model-container dashed-border">
+                        <div id="model-placeholder" class="placeholder empty-state minimal">
+                            <div class="empty-icon-circle minimal">
+                                <span class="material-symbols-outlined">add_a_photo</span>
+                            </div>
+                            <span class="empty-label">THÊM ẢNH</span>
+                            <span class="empty-instruction">Ảnh toàn thân</span>
+                        </div>
+                        <div class="image-wrapper relative full-width full-height">
+                            <img id="model-image" class="preview-image hidden" alt="Model">
+                            <button id="delete-model-btn" class="delete-fab hidden" title="Bỏ chọn ảnh">
+                                <span class="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
                     </div>
-                    <div class="user-models-grid" id="user-models-grid">
-                        <!-- User models will be rendered here -->
+
+                    <!-- Vertical Floating Gallery -->
+                    <div id="user-models-grid" class="user-models-grid-vertical">
+                        <!-- Items injected by JS -->
                     </div>
                 </div>
+
+                <input type="file" id="model-upload-input" accept="image/*" hidden>
             </section>
 
             <!-- Mix Match Section (New Design) -->
             <section class="mix-match-wrapper">
-                
+
                 <!-- Top Card: Visual 2D (Replaces Product Section) -->
                 <div class="visual-card">
                     <div class="visual-header">Item đã chọn</div>
-                    
+
                     <div id="clothing-image-container" class="visual-image-container">
                         <!-- Placeholder -->
                         <div id="clothing-placeholder" class="visual-placeholder">
                             <i class="material-symbols-outlined placeholder-icon">checkroom</i>
                             <span>Chưa chọn đồ</span>
                         </div>
-                        
+
                         <!-- Image -->
                         <img id="clothing-image" class="visual-img hidden" alt="Clothing">
 
-                        <!-- Floating Mock Tags (Only visible when image is loaded - handled by CSS/JS?) -->
+                        <!-- Selected Items Bubbles (New Design) -->
+                        <div id="selected-items-bubbles" class="selected-items-bubbles">
+                            <!-- Injected via JS -->
+                        </div>
+
+                        <!-- Floating Mock Tags (Only visible when image is loaded) -->
                         <div class="floating-tag tag-left hidden" id="tag-top">
                             <span class="tag-dot"></span> Áo Polo
                         </div>
-                         <div class="floating-tag tag-right hidden" id="tag-bottom">
+                        <div class="floating-tag tag-right hidden" id="tag-bottom">
                             <span class="tag-dot"></span> Quần Tây
                         </div>
 
@@ -400,7 +414,7 @@
 
                 <!-- Bottom Section: Selection (Replaces History) -->
                 <div class="selection-section" id="clothing-history-section"> <!-- Retain ID for JS -->
-                    
+
                     <div class="selection-header">
                         <div class="selection-title-group">
                             <span class="material-symbols-outlined selection-icon">style</span>
@@ -502,7 +516,7 @@
 
             <!-- Created Outfits List -->
             <section id="created-outfits-list-section" class="section created-outfits-section hidden">
-                 <div class="section-header">
+                <div class="section-header">
                     <h3>
                         <span class="material-symbols-outlined">style</span>
                         Outfit đã tạo
@@ -531,7 +545,7 @@
                     <!-- Lookbook Card -->
                     <div id="lookbook-card" class="lookbook-card">
                         <div class="lookbook-brand">GEMINI STYLIST</div>
-                        
+
                         <!-- Images Container (1 or 2 images) -->
                         <div id="lookbook-images" class="lookbook-images-container">
                             <!-- Injected via JS -->
@@ -540,7 +554,8 @@
                         <!-- Editable Text -->
                         <div class="lookbook-caption-container">
                             <div class="lookbook-divider"></div>
-                            <div id="lookbook-caption" class="lookbook-caption" contenteditable="true" spellcheck="false">
+                            <div id="lookbook-caption" class="lookbook-caption" contenteditable="true"
+                                spellcheck="false">
                                 Help me choose the perfect fit for tonight's gala ✨
                             </div>
                             <div class="lookbook-subcaption">SPRING COLLECTION 2024</div>
@@ -548,9 +563,12 @@
 
                         <!-- Reaction Buttons (Decorative) -->
                         <div class="lookbook-reactions">
-                            <button class="reaction-circle pink"><span class="material-symbols-outlined">favorite</span></button>
-                            <button class="reaction-circle yellow"><span class="material-symbols-outlined">auto_awesome</span></button>
-                            <button class="reaction-circle white"><span class="material-symbols-outlined">question_mark</span></button>
+                            <button class="reaction-circle pink"><span
+                                    class="material-symbols-outlined">favorite</span></button>
+                            <button class="reaction-circle yellow"><span
+                                    class="material-symbols-outlined">auto_awesome</span></button>
+                            <button class="reaction-circle white"><span
+                                    class="material-symbols-outlined">question_mark</span></button>
                         </div>
                     </div>
 
@@ -560,7 +578,8 @@
                         <div class="social-grid">
                             <button class="social-item" data-platform="instagram">
                                 <div class="social-icon-circle instagram">
-                                    <img src="../assets/icon-instagram.svg" alt="IG" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiByeD0iNSIgcnk9IjUiLz48cGF0aCBkPSJNMTYgMTEuMzdBNCADIDAgMSAxIDEyLjYzIDggNCA0IDAgMCAxIDE2IDExLjM3eiIvPjxsaW5lIHgxPSIxNy41IiB5MT0iNi41IiB4Mj0iMTcuNTEiIHkyPSI2LjUiLz48L3N2Zz4='">
+                                    <img src="../assets/icon-instagram.svg" alt="IG"
+                                        onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiByeD0iNSIgcnk9IjUiLz48cGF0aCBkPSJNMTYgMTEuMzdBNCADIDAgMSAxIDEyLjYzIDggNCA0IDAgMCAxIDE2IDExLjM3eiIvPjxsaW5lIHgxPSIxNy41IiB5MT0iNi41IiB4Mj0iMTcuNTEiIHkyPSI2LjUiLz48L3N2Zz4='">
                                 </div>
                                 <span class="social-label">Story</span>
                             </button>
@@ -683,19 +702,21 @@
                                 <stop offset="100%" stop-color="#B2EBF2" />
                             </linearGradient>
                         </defs>
-                        
+
                         <!-- Glow effect behind -->
-                        <circle cx="100" cy="100" r="70" fill="rgba(255, 255, 255, 0.5)" filter="url(#glow)" class="mascot-glow" />
+                        <circle cx="100" cy="100" r="70" fill="rgba(255, 255, 255, 0.5)" filter="url(#glow)"
+                            class="mascot-glow" />
 
                         <!-- Body -->
                         <path d="M85 130 Q100 135 115 130 L125 180 Q100 190 75 180 Z" fill="url(#dressGrad)" />
-                        
+
                         <!-- Head -->
                         <circle cx="100" cy="90" r="45" fill="#FFE0BD" /> <!-- Skin -->
-                        
+
                         <!-- Hair (Back) -->
-                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z" fill="url(#hairGrad)" />
-                        
+                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z"
+                            fill="url(#hairGrad)" />
+
                         <!-- Face -->
                         <!-- Eyes -->
                         <ellipse cx="82" cy="95" rx="6" ry="8" fill="#5D4037" class="eye-blink" />
@@ -704,14 +725,17 @@
                         <ellipse cx="75" cy="105" rx="5" ry="3" fill="#FFAB91" opacity="0.6" />
                         <ellipse cx="125" cy="105" rx="5" ry="3" fill="#FFAB91" opacity="0.6" />
                         <!-- Mouth -->
-                        <path d="M95 108 Q100 112 105 108" fill="none" stroke="#A1887F" stroke-width="2" stroke-linecap="round" />
+                        <path d="M95 108 Q100 112 105 108" fill="none" stroke="#A1887F" stroke-width="2"
+                            stroke-linecap="round" />
 
                         <!-- Hair (Bangs) -->
-                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90" fill="url(#hairGrad)" />
-                        
+                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90"
+                            fill="url(#hairGrad)" />
+
                         <!-- Wand -->
                         <g class="wand-animation">
-                            <line x1="130" y1="120" x2="150" y2="100" stroke="#FFCC80" stroke-width="4" stroke-linecap="round" />
+                            <line x1="130" y1="120" x2="150" y2="100" stroke="#FFCC80" stroke-width="4"
+                                stroke-linecap="round" />
                             <path d="M150 100 L145 95 L150 90 L155 95 Z" fill="#FFD700" /> <!-- Star tip -->
                             <circle cx="150" cy="100" r="8" fill="none" stroke="#FFF" stroke-width="1" opacity="0.8" />
                         </g>
@@ -728,14 +752,14 @@
                 <!-- Text & Progress -->
                 <div class="loading-info">
                     <h3 id="loading-text" class="anime-title">Đang hô biến... ✨</h3>
-                    
+
                     <div class="magic-progress-container">
                         <div class="magic-progress-bar">
                             <div id="loading-progress-bar" class="magic-progress-fill" style="width: 0%"></div>
                         </div>
                         <div class="magic-sparkle-follower"></div>
                     </div>
-                    
+
                     <p id="loading-progress-text" class="anime-percent">0%</p>
                     <p id="loading-tip" class="anime-tip">💡 AI đang thử đồ cho bạn đó!</p>
                 </div>
@@ -762,34 +786,40 @@
                                 <stop offset="100%" stop-color="#B2EBF2" />
                             </linearGradient>
                         </defs>
-                        
+
                         <!-- Glow effect behind -->
-                        <circle cx="100" cy="100" r="70" fill="rgba(255, 255, 255, 0.6)" filter="url(#glowSuccess)" class="mascot-glow" />
+                        <circle cx="100" cy="100" r="70" fill="rgba(255, 255, 255, 0.6)" filter="url(#glowSuccess)"
+                            class="mascot-glow" />
 
                         <!-- Body (Dancing/Happy Pose) -->
                         <path d="M85 130 Q100 135 115 130 L135 170 Q100 190 65 170 Z" fill="url(#dressGradSuccess)" />
-                        
+
                         <!-- Head -->
                         <circle cx="100" cy="90" r="45" fill="#FFE0BD" />
-                        
+
                         <!-- Hair (Back) -->
-                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z" fill="url(#hairGradSuccess)" />
-                        
+                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z"
+                            fill="url(#hairGradSuccess)" />
+
                         <!-- Face (Happy Expression) -->
                         <!-- Eyes (Closed Happy ^ ^) -->
-                        <path d="M75 95 Q82 85 89 95" fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" />
-                        <path d="M111 95 Q118 85 125 95" fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round" />
-                        
+                        <path d="M75 95 Q82 85 89 95" fill="none" stroke="#5D4037" stroke-width="3"
+                            stroke-linecap="round" />
+                        <path d="M111 95 Q118 85 125 95" fill="none" stroke="#5D4037" stroke-width="3"
+                            stroke-linecap="round" />
+
                         <!-- Blush -->
                         <ellipse cx="75" cy="105" rx="6" ry="4" fill="#FFAB91" opacity="0.6" />
                         <ellipse cx="125" cy="105" rx="6" ry="4" fill="#FFAB91" opacity="0.6" />
 
                         <!-- Mouth (Big Smile) -->
-                        <path d="M90 110 Q100 120 110 110" fill="none" stroke="#A1887F" stroke-width="2" stroke-linecap="round" />
-                        
+                        <path d="M90 110 Q100 120 110 110" fill="none" stroke="#A1887F" stroke-width="2"
+                            stroke-linecap="round" />
+
                         <!-- Hair (Bangs) -->
-                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90" fill="url(#hairGradSuccess)" />
-                        
+                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90"
+                            fill="url(#hairGradSuccess)" />
+
                         <!-- V Sign Hand -->
                         <g transform="translate(135, 110) rotate(-20)">
                             <path d="M0 0 L5 -15 L10 0 L15 -15 L20 0 L10 20 Z" fill="#FFE0BD" />
@@ -807,7 +837,7 @@
                 <!-- Success Text -->
                 <div class="loading-info">
                     <h3 class="anime-title success-title">Thành công! ✨</h3>
-                    
+
                     <p id="success-message-text" class="anime-tip success-message">
                         Outfit này trông tuyệt vời!
                     </p>
@@ -838,36 +868,43 @@
                                 <stop offset="100%" stop-color="#B2EBF2" />
                             </linearGradient>
                         </defs>
-                        
+
                         <!-- Body (Same) -->
                         <path d="M85 130 Q100 135 115 130 L125 180 Q100 190 75 180 Z" fill="url(#dressGradErr)" />
-                        
+
                         <!-- Head (Same) -->
                         <circle cx="100" cy="90" r="45" fill="#FFE0BD" />
-                        
+
                         <!-- Hair (Back) (Same) -->
-                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z" fill="url(#hairGradErr)" />
-                        
+                        <path d="M60 90 Q50 150 40 160 Q80 150 100 150 Q120 150 160 160 Q150 150 140 90 Z"
+                            fill="url(#hairGradErr)" />
+
                         <!-- Face (Sad Expression) -->
                         <!-- Eyes (X shape or tearing) -->
                         <g class="sad-eyes">
-                            <text x="75" y="100" font-size="20" fill="#5D4037" font-family="monospace" font-weight="bold">></text>
-                            <text x="115" y="100" font-size="20" fill="#5D4037" font-family="monospace" font-weight="bold"><</text>
+                            <text x="75" y="100" font-size="20" fill="#5D4037" font-family="monospace"
+                                font-weight="bold">></text>
+                            <text x="115" y="100" font-size="20" fill="#5D4037" font-family="monospace"
+                                font-weight="bold">
+                                << /text>
                         </g>
-                        
+
                         <!-- Blush (Same) -->
                         <ellipse cx="75" cy="105" rx="5" ry="3" fill="#FFAB91" opacity="0.6" />
                         <ellipse cx="125" cy="105" rx="5" ry="3" fill="#FFAB91" opacity="0.6" />
 
                         <!-- Mouth (Wavy/Sad) -->
-                        <path d="M90 115 Q100 110 110 115" fill="none" stroke="#A1887F" stroke-width="2" stroke-linecap="round" />
-                        
+                        <path d="M90 115 Q100 110 110 115" fill="none" stroke="#A1887F" stroke-width="2"
+                            stroke-linecap="round" />
+
                         <!-- Tear Drop Animation -->
-                        <path d="M70 105 Q65 115 70 120 Q75 115 70 105" fill="#81D4FA" class="tear-drop" opacity="0.8" />
+                        <path d="M70 105 Q65 115 70 120 Q75 115 70 105" fill="#81D4FA" class="tear-drop"
+                            opacity="0.8" />
 
                         <!-- Hair (Bangs) (Same) -->
-                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90" fill="url(#hairGradErr)" />
-                        
+                        <path d="M55 90 Q60 50 100 45 Q140 50 145 90 Q140 70 100 75 Q60 70 55 90"
+                            fill="url(#hairGradErr)" />
+
                         <!-- Broken Wand / Question Mark -->
                         <text x="140" y="100" font-size="32" fill="#FFAB91" class="question-mark">?</text>
                     </svg>
@@ -876,7 +913,7 @@
                 <!-- Error Text -->
                 <div class="loading-info">
                     <h3 class="anime-title error-title">Oops! Có lỗi rồi... 😿</h3>
-                    
+
                     <p id="error-message-text" class="anime-tip error-message">
                         AI không thể xử lý ảnh này được.
                     </p>
