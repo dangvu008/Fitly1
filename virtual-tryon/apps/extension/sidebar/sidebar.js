@@ -2108,22 +2108,6 @@ function setupEventListeners() {
         });
     });
 
-    // Profile Dropdown Toggle
-    elements.profileBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const menu = document.getElementById('profile-menu');
-        menu?.classList.toggle('hidden');
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        const menu = document.getElementById('profile-menu');
-        const btn = document.getElementById('profile-btn');
-        if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !btn?.contains(e.target)) {
-            menu.classList.add('hidden');
-        }
-    });
-
     // Logout
     document.getElementById('menu-logout')?.addEventListener('click', handleLogout);
 
