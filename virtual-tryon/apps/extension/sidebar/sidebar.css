@@ -121,6 +121,28 @@
   box-sizing: border-box;
 }
 
+/* Utilities */
+.full-height {
+  height: 100%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.relative {
+  position: relative;
+}
+
+/* Image Wrapper */
+.image-wrapper {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+}
+
 body {
   font-family: var(--font-family);
   font-size: var(--font-size-base);
@@ -604,8 +626,12 @@ h6 {
 .image-container.has-image {
   border: none;
   aspect-ratio: unset;
-  max-height: 320px;
-  cursor: default;
+  min-height: 400px;
+  /* Ensure enough height for full body */
+  max-height: 520px;
+  /* Limit to prevent too much scroll */
+  cursor: pointer;
+  /* Allow click to change */
   box-shadow: var(--shadow-md);
 }
 
@@ -632,65 +658,100 @@ h6 {
   box-shadow: var(--shadow-sm);
 }
 
-/* Model Redesign Container */
+/* Model Redesign Container - Main Image on Top + Thumbnails Below */
 .model-view-container {
   position: relative;
   width: 100%;
   margin-top: var(--space-2);
-}
-
-.model-badge-floating {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: white;
-  padding: 6px 14px;
-  border-radius: 99px;
-  font-size: 11px;
-  font-weight: 600;
-  z-index: 10;
-  pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.user-models-grid-vertical {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  bottom: 16px;
-  width: 76px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  z-index: 10;
-  overflow-y: auto;
-  padding-right: 4px;
-  /* Space for scrollbar if needed */
 }
 
-.user-models-grid-vertical::-webkit-scrollbar {
-  width: 0;
-  /* Hide scrollbar but keep scrollable */
-}
-
-/* Redesigned Model Item */
-.user-model-item {
+/* Main Image Container (Top) - Full Width with Click to Zoom */
+.image-container.model-container {
+  width: 100%;
+  height: 520px;
+  /* Fixed height for portrait */
+  background: #fcfbf9;
+  border: 2px dashed #d7ccc8;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   position: relative;
-  width: 72px;
-  height: 96px;
+  transition: all 0.2s ease;
+}
+
+.image-container.model-container.has-image {
+  border: none;
+  background: transparent;
+  cursor: pointer; /* Indicate clickable */
+}
+
+.image-container.model-container.has-image:hover {
+  opacity: 0.95;
+}
+
+.image-container.model-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+/* Horizontal Scrollable Thumbnails (Bottom) */
+.user-models-grid-vertical {
+  width: 100%;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4px 12px 4px; /* Extra padding bottom for scrollbar */
+  scrollbar-width: thin; /* Firefox - show thin scrollbar */
+  scrollbar-color: rgba(188, 170, 164, 0.3) transparent; /* Firefox scrollbar colors */
+}
+
+/* Scrollbar for Chrome/Safari/Opera - Always visible but subtle */
+.user-models-grid-vertical::-webkit-scrollbar {
+  height: 6px; /* Visible scrollbar */
+  background: transparent;
+}
+
+.user-models-grid-vertical::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.user-models-grid-vertical::-webkit-scrollbar-thumb {
+  background: rgba(188, 170, 164, 0.4);
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.user-models-grid-vertical::-webkit-scrollbar-thumb:hover {
+  background: rgba(188, 170, 164, 0.7);
+}
+
+/* Model Item - SMALL CIRCLE for Thumbnails (80px) - NO ACTION BUTTONS */
+.user-model-item {
+  width: 80px !important;
+  height: 80px !important;
+  /* Small sidebar thumbnail */
   flex-shrink: 0;
-  border-radius: 18px;
+  border-radius: 50% !important;
   overflow: hidden;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: 2px solid transparent;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid white;
+  /* Thinner border */
+  transition: all 0.3s ease;
+  position: relative !important;
+  background: #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  aspect-ratio: 1/1 !important;
 }
 
 .user-model-item img {
@@ -700,51 +761,228 @@ h6 {
 }
 
 .user-model-item:hover {
-  transform: scale(1.03);
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.user-model-item.selected {
-  border-color: white;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4), 0 4px 20px rgba(0, 0, 0, 0.25);
   transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Glassmorphism "+" Card */
-.add-model-card {
-  width: 72px;
-  height: 72px;
+/* Active/Selected State */
+.user-model-item.active {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+  transform: scale(1.08);
+}
+
+/* Pinned State */
+.user-model-item.pinned {
+  border-color: #fbbf24;
+}
+
+/* Number badge - Small */
+.user-model-item .item-index {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  z-index: 2;
+}
+
+/* Pin Badge - Small */
+.user-model-item .pin-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #fbbf24;
+  color: white;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.user-model-item .pin-badge .material-symbols-outlined {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Model Label - Only show on active, smaller text */
+.user-model-item.active .model-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  color: white;
+  font-family: var(--font-family-heading);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 4px 6px;
+  pointer-events: none;
+}
+
+/* ===========================================
+   MAIN IMAGE ACTION BUTTONS (Bottom Left on Main Image)
+   =========================================== */
+.main-image-actions {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 5;
+  animation: fadeInUp 0.3s ease-out;
+  pointer-events: auto; /* Ensure buttons are clickable */
+}
+
+.main-image-actions.hidden {
+  display: none;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.main-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: var(--font-family-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.main-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.main-action-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.main-action-btn.pin-btn {
+  color: #f59e0b;
+  /* Amber */
+}
+
+.main-action-btn.pin-btn:hover {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+
+.main-action-btn.delete-btn {
+  color: var(--color-error);
+}
+
+.main-action-btn.delete-btn:hover {
+  background: var(--color-error);
+  color: white;
+  border-color: var(--color-error);
+}
+
+.main-action-btn .btn-label {
+  white-space: nowrap;
+}
+
+/* Gallery Icon Button - Small (80px) */
+.gallery-icon-btn {
+  width: 80px;
+  height: 80px;
   flex-shrink: 0;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  background: rgba(245, 245, 245, 0.9);
+  border: 2px solid white;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  color: white;
+  gap: 3px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: auto;
-  /* Push to bottom if space allows */
+  transition: all 0.3s ease;
+  color: #9e9e9e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.gallery-icon-btn:hover {
+  background: rgba(230, 230, 230, 0.95);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gallery-icon-btn .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.gallery-icon-btn::after {
+  content: 'Gallery';
+  font-family: var(--font-family-heading);
+  font-size: 9px;
+  font-weight: 600;
+  color: #757575;
+}
+
+/* Add Button Card - Small (80px) */
+.add-model-card {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(245, 245, 245, 0.9);
+  border: 2px dashed #bcaaa4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #bcaaa4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .add-model-card:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: translateY(-2px);
+  background: var(--color-primary);
+  border-style: solid;
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .add-model-card .material-symbols-outlined {
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 300;
 }
 
 .add-model-card::after {
-  content: "Thêm";
-  font-size: 10px;
+  content: 'Add Photo';
+  font-family: var(--font-family-heading);
+  font-size: 9px;
   font-weight: 600;
 }
 
@@ -753,6 +991,15 @@ h6 {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+}
+
+
+.image-container .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-primary-dark);
 }
 
 .empty-icon-circle.minimal {
@@ -2074,6 +2321,8 @@ h6 {
   cursor: pointer;
   transition: all 0.2s;
   padding: 0;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .social-btn:hover {
@@ -2451,15 +2700,24 @@ h6 {
   color: var(--color-foreground-muted);
 }
 
+/* DEPRECATED: Old grid layout - DO NOT USE */
+/* 
 .user-models-grid-vertical,
 .clothing-history-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
+*/
 
-/* Base Thumbnail Style */
-.user-model-item,
+/* Clothing history grid (keep for clothing section) */
+.clothing-history-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+/* Base Thumbnail Style - ONLY for clothing items */
 .clothing-history-item {
   position: relative;
   aspect-ratio: 3/4;
@@ -2470,7 +2728,7 @@ h6 {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.user-model-item img,
+/* Clothing item images */
 .clothing-history-item img {
   width: 100%;
   height: 100%;
@@ -2478,20 +2736,17 @@ h6 {
   transition: transform 0.3s ease;
 }
 
-/* Hover Effect */
-.user-model-item:hover,
+/* Hover Effect - Clothing only */
 .clothing-history-item:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.user-model-item:hover img,
 .clothing-history-item:hover img {
   transform: scale(1.05);
 }
 
-/* Selected State */
-.user-model-item.selected,
+/* Selected State - Clothing only */
 .clothing-history-item.selected {
   box-shadow: 0 0 0 2px var(--color-primary-dark);
 }
@@ -3999,13 +4254,13 @@ h6 {
 /* Wardrobe Categories (Horizontal Scroll) */
 .wardrobe-categories {
   display: flex;
-  gap: 8px;
-  /* Balanced gap */
+  gap: 4px;
+  /* Reduced from 8px for better fit */
   overflow-x: auto;
-  padding: 4px 16px 12px;
-  /* Padding for horizontal scroll and shadow */
-  margin: 0 -16px;
-  /* Offset parent padding to touch edges */
+  padding: 4px 12px 12px;
+  /* Reduced left/right padding */
+  margin: 0 -12px;
+  /* Offset parent padding */
   scrollbar-width: none;
   /* Firefox */
   -ms-overflow-style: none;
@@ -4018,7 +4273,8 @@ h6 {
 }
 
 .wardrobe-cat-tab {
-  padding: 6px 14px;
+  padding: 6px 10px;
+  /* Reduced from 14px */
   border-radius: 99px;
   /* Pill shape */
   border: 1px solid var(--color-border-dark);

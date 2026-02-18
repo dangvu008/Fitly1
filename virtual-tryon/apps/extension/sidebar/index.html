@@ -318,13 +318,13 @@
 
             <div class="social-login-grid">
                 <button id="login-google-btn" class="social-btn google" title="Google">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                    <img src="https://www.vectorlogo.zone/logos/google/google-icon.svg" alt="Google">
                 </button>
                 <button id="login-facebook-btn" class="social-btn facebook" title="Facebook">
                     <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" alt="Facebook">
                 </button>
                 <button id="login-apple-btn" class="social-btn apple" title="Apple">
-                    <img src="https://www.svgrepo.com/show/475631/apple-color.svg" alt="Apple">
+                    <img src="https://www.vectorlogo.zone/logos/apple/apple-tile.svg" alt="Apple">
                 </button>
             </div>
 
@@ -342,15 +342,15 @@
             </div>
 
             <!-- Model Section -->
-            <!-- Model Section Redesigned -->
+            <!-- Model Section Redesigned - Main Image on Top + Thumbnails Below -->
             <section class="section model-redesign-section">
                 <div class="section-header">
                     <h3>Ảnh mẫu toàn thân</h3>
                 </div>
 
                 <div class="model-view-container">
-                    <!-- Main Model Display -->
-                    <div id="model-image-container" class="image-container model-container dashed-border">
+                    <!-- Main Model Display (Top - Full Width) -->
+                    <div id="model-image-container" class="image-container model-container">
                         <div id="model-placeholder" class="placeholder empty-state minimal">
                             <div class="empty-icon-circle minimal">
                                 <span class="material-symbols-outlined">add_a_photo</span>
@@ -358,15 +358,22 @@
                             <span class="empty-label">THÊM ẢNH</span>
                             <span class="empty-instruction">Ảnh toàn thân</span>
                         </div>
-                        <div class="image-wrapper relative full-width full-height">
-                            <img id="model-image" class="preview-image hidden" alt="Model">
-                            <button id="delete-model-btn" class="delete-fab hidden" title="Bỏ chọn ảnh">
-                                <span class="material-symbols-outlined">close</span>
+                        <img id="model-image" class="preview-image hidden" alt="Model">
+                        
+                        <!-- Action Buttons on Main Image (shown when image is loaded) -->
+                        <div id="main-image-actions" class="main-image-actions hidden">
+                            <button id="main-pin-btn" class="main-action-btn pin-btn" title="Đặt làm ảnh mặc định">
+                                <span class="material-symbols-outlined">push_pin</span>
+                                <span class="btn-label">Đặt mặc định</span>
+                            </button>
+                            <button id="main-delete-btn" class="main-action-btn delete-btn" title="Xóa ảnh này">
+                                <span class="material-symbols-outlined">delete</span>
+                                <span class="btn-label">Xóa</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Vertical Floating Gallery -->
+                    <!-- Horizontal Scrollable Thumbnails (Bottom) -->
                     <div id="user-models-grid" class="user-models-grid-vertical">
                         <!-- Items injected by JS -->
                     </div>

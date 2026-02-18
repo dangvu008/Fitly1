@@ -265,6 +265,7 @@ async function init() {
     setupInfiniteScroll();
     initCategoryTabs();
     initTooltipSystem();
+    setupMainImageClickHandler(); // Setup click handler for main image popup
     listenForMessages();
     listenForStorageChanges();
     console.log('Fitly sidebar initialized');
@@ -395,23 +396,36 @@ async function loadUserModels() {
     try {
         const response = await chrome.runtime.sendMessage({ type: 'GET_USER_MODELS' });
         if (response?.success) {
-            // Standardize model objects
-            state.userModels = (response.models || []).map(m => ({
+            // Standardize model objects with timestamp
+            const realModels = (response.models || []).map(m => ({
                 id: m.id,
                 imageUrl: m.url || m.imageUrl,
-                url: m.url || m.imageUrl
+                url: m.url || m.imageUrl,
+                createdAt: m.createdAt || m.created_at || m.timestamp || Date.now() // Preserve timestamp if available
             }));
-            state.defaultModelId = response.defaultModelId;
-            renderUserModels();
 
-            // If there's a default model, use it
-            if (state.defaultModelId && !state.modelImage) {
+            // If user has real models, use them; otherwise keep existing state (including mock data)
+            if (realModels.length > 0) {
+                state.userModels = realModels;
+            } else if (state.userModels.length === 0) {
+                // First time load with no real models - initialize with empty array
+                state.userModels = [];
+            }
+            // If realModels is empty but state.userModels has data (mock), keep it
+
+            state.defaultModelId = response.defaultModelId;
+
+            // ALWAYS load pinned/default model when extension opens (if exists)
+            if (state.defaultModelId) {
                 const defaultModel = state.userModels.find(m => m.id === state.defaultModelId);
                 if (defaultModel) {
                     state.modelImage = defaultModel.url;
                     state.selectedModelId = defaultModel.id;
+                    console.log('[loadUserModels] Loaded pinned model:', state.defaultModelId);
                 }
             }
+
+            renderUserModels();
         }
     } catch (error) {
         console.error('Failed to load user models:', error);
@@ -420,61 +434,100 @@ async function loadUserModels() {
 
 function renderUserModels() {
     const grid = document.getElementById('user-models-grid');
-
     if (!grid) return;
 
+    // Get actual user models (no mock data fallback to avoid replacement)
+    let displayModels = state.userModels || [];
+
+    // Debug log
+    console.log('[renderUserModels] Total models:', displayModels.length, displayModels);
+
+    // If no models at all, show mock data for demo
+    const hasMockData = displayModels.length === 0;
+    const mockModels = hasMockData ? [
+        { id: 'mock1', imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=2864&auto=format&fit=crop' },
+        { id: 'mock2', imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=2787&auto=format&fit=crop' },
+        { id: 'mock3', imageUrl: 'https://images.unsplash.com/photo-1531384441138-2736e62e0f19?q=80&w=2787&auto=format&fit=crop' }
+    ] : [];
+
+    let finalModels = hasMockData ? mockModels : [...displayModels];
+
+    // Sort: Active image ALWAYS first (#1), then by newest timestamp
+    if (!hasMockData && finalModels.length > 0) {
+        finalModels.sort((a, b) => {
+            // Active image (currently displayed) ALWAYS goes first
+            const aIsActive = state.selectedModelId === a.id || state.modelImage === a.imageUrl;
+            const bIsActive = state.selectedModelId === b.id || state.modelImage === b.imageUrl;
+            if (aIsActive && !bIsActive) return -1;
+            if (!aIsActive && bIsActive) return 1;
+
+            // For remaining images: sort by timestamp descending (newest first)
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : (parseInt(a.id) || 0);
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : (parseInt(b.id) || 0);
+            return bTime - aTime; // Descending order (newest first)
+        });
+    }
+
+    console.log('[renderUserModels] Rendering:', finalModels.length, 'models (mock:', hasMockData, ')');
+    console.log('[renderUserModels] Active ID:', state.selectedModelId, 'Default ID:', state.defaultModelId);
+
+    // Build HTML: Add Button FIRST, then thumbnails
     let html = '';
 
-    // Render items
-    html += state.userModels.map((item, index) => {
-        const isSelected = state.selectedModelId === item.id;
+    // 1. Add Button (always show at the BEGINNING)
+    html += `
+        <button class="add-model-card" id="add-model-btn-card" title="Thêm ảnh mới">
+            <span class="material-symbols-outlined">add</span>
+        </button>
+    `;
+
+    // 2. Render ALL thumbnail circles (scrollable horizontally)
+    html += finalModels.map((item, index) => {
+        const isActive = state.selectedModelId === item.id || state.modelImage === item.imageUrl;
+        const isDefault = state.defaultModelId === item.id;
+        const isPinned = isDefault && !hasMockData;
 
         return `
-            <div class="user-model-item ${isSelected ? 'selected' : ''}" 
+            <div class="user-model-item ${isActive ? 'active' : ''} ${isPinned ? 'pinned' : ''}" 
                  data-id="${item.id}" 
-                 data-url="${item.imageUrl}">
+                 data-url="${item.imageUrl}"
+                 title="Ảnh mẫu ${index + 1}${isPinned ? ' (Mặc định)' : ''}">
                 <img src="${item.imageUrl}" alt="Model ${index + 1}">
+                <div class="item-index">${index + 1}</div>
+                ${isPinned ? '<div class="pin-badge" title="Ảnh mặc định"><span class="material-symbols-outlined">push_pin</span></div>' : ''}
+                ${isActive ? '<div class="model-label">Model</div>' : ''}
             </div>
         `;
     }).join('');
 
-    // Add "+" Button Card
-    html += `
-        <div class="add-model-card" id="add-model-btn-card" title="Thêm ảnh mới">
-            <span class="material-symbols-outlined">add</span>
-        </div>
-    `;
-
     grid.innerHTML = html;
 
-    // Add click handlers
+    // Add click handlers for thumbnail items (NO action buttons on thumbnails)
     grid.querySelectorAll('.user-model-item').forEach(item => {
-        item.addEventListener('click', () => {
+        // Click on thumbnail to select
+        item.addEventListener('click', (e) => {
             const id = item.dataset.id;
             const url = item.dataset.url;
 
-            // Toggle selection: if already selected, clear it. Otherwise select it.
-            if (state.selectedModelId === id) {
-                state.modelImage = null;
-                state.selectedModelId = null;
-            } else {
-                state.modelImage = url;
-                state.selectedModelId = id;
-            }
+            // Set as main image
+            state.modelImage = url;
+            state.selectedModelId = id;
 
-            // Update selected state visually
-            renderUserModels(); // Re-render to update badges/selected class
-            updateUI(); // Update main preview
+            updateUI(); // Update main preview (will show action buttons on main image)
+            renderUserModels(); // Re-render list to update active state
         });
     });
 
-    // Add handler for + button
+    // Add handler for Add button
     const addBtn = document.getElementById('add-model-btn-card');
     if (addBtn) {
         addBtn.addEventListener('click', () => {
             document.getElementById('model-upload-input').click();
         });
     }
+
+    // Setup infinite scroll observer for lazy loading
+    setupInfiniteScrollForModels(grid);
 }
 
 async function addUserModel(imageUrl, source = 'upload') {
@@ -503,7 +556,312 @@ async function addUserModel(imageUrl, source = 'upload') {
     }
 }
 
+// ==========================================
+// MAIN IMAGE ACTION BUTTONS (On Main Image, Not Thumbnails)
+// ==========================================
+
+function renderMainImageActions() {
+    // Remove existing buttons first
+    removeMainImageActions();
+
+    // Don't show actions for mock data or if no image selected
+    if (!state.selectedModelId || state.selectedModelId.startsWith('mock')) {
+        return;
+    }
+
+    const actionsContainer = document.getElementById('main-image-actions');
+    if (!actionsContainer) return;
+
+    const isPinned = state.defaultModelId === state.selectedModelId;
+
+    // Update button states
+    const pinBtn = document.getElementById('main-pin-btn');
+    const deleteBtn = document.getElementById('main-delete-btn');
+
+    if (pinBtn) {
+        const pinIcon = pinBtn.querySelector('.material-symbols-outlined');
+        const pinLabel = pinBtn.querySelector('.btn-label');
+        
+        if (isPinned) {
+            pinIcon.textContent = 'keep_off';
+            pinLabel.textContent = 'Bỏ ghim';
+            pinBtn.title = 'Bỏ ghim ảnh mặc định';
+        } else {
+            pinIcon.textContent = 'push_pin';
+            pinLabel.textContent = 'Đặt mặc định';
+            pinBtn.title = 'Đặt làm ảnh mặc định';
+        }
+    }
+
+    // Show the container
+    actionsContainer.classList.remove('hidden');
+
+    // Add event listeners (remove old ones first)
+    if (pinBtn) {
+        const newPinBtn = pinBtn.cloneNode(true);
+        pinBtn.parentNode.replaceChild(newPinBtn, pinBtn);
+        
+        newPinBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (isPinned) {
+                await setDefaultModel(null);
+            } else {
+                await setDefaultModel(state.selectedModelId);
+            }
+        });
+    }
+
+    if (deleteBtn) {
+        const newDeleteBtn = deleteBtn.cloneNode(true);
+        deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+        
+        newDeleteBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await deleteUserModel(state.selectedModelId);
+        });
+    }
+}
+
+function removeMainImageActions() {
+    const actionsContainer = document.getElementById('main-image-actions');
+    if (actionsContainer) {
+        actionsContainer.classList.add('hidden');
+    }
+}
+
+// Add click handler for main image to open popup/zoom or file picker
+function setupMainImageClickHandler() {
+    const modelImageContainer = document.getElementById('model-image-container');
+    const modelImage = document.getElementById('model-image');
+    const modelUploadInput = document.getElementById('model-upload-input');
+    
+    if (modelImageContainer && modelImage && modelUploadInput) {
+        modelImageContainer.addEventListener('click', (e) => {
+            // Don't trigger if clicking on action buttons
+            if (e.target.closest('.main-image-actions')) {
+                return;
+            }
+            
+            // If image is loaded (not mock) → open popup to zoom
+            if (state.modelImage && !state.selectedModelId?.startsWith('mock')) {
+                openImagePopup(state.modelImage);
+            } else {
+                // If no image (empty/placeholder) → open file picker to add image
+                modelUploadInput.click();
+            }
+        });
+    }
+}
+
+// Simple image popup/lightbox
+function openImagePopup(imageUrl) {
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: zoom-out;
+        animation: fadeIn 0.2s ease-out;
+    `;
+    
+    // Create image
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.style.cssText = `
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    `;
+    
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        transition: transform 0.2s;
+    `;
+    
+    closeBtn.addEventListener('mouseenter', () => {
+        closeBtn.style.transform = 'scale(1.1)';
+    });
+    
+    closeBtn.addEventListener('mouseleave', () => {
+        closeBtn.style.transform = 'scale(1)';
+    });
+    
+    // Close handlers
+    const closePopup = () => {
+        overlay.style.animation = 'fadeOut 0.2s ease-out';
+        setTimeout(() => overlay.remove(), 200);
+    };
+    
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closePopup();
+    });
+    
+    closeBtn.addEventListener('click', closePopup);
+    
+    // Add to DOM
+    overlay.appendChild(img);
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+    
+    // Add CSS animation
+    if (!document.getElementById('popup-animations')) {
+        const style = document.createElement('style');
+        style.id = 'popup-animations';
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+/*
+// DEPRECATED: Old function - kept for reference
+function renderMainImageActions() {
+function renderMainImageActions() {
+    // Remove existing buttons first
+    removeMainImageActions();
+
+    // Don't show actions for mock data
+    if (!state.selectedModelId || state.selectedModelId.startsWith('mock')) {
+        return;
+    }
+
+    const imageWrapper = elements.modelImage?.parentElement;
+    if (!imageWrapper) return;
+
+    const isPinned = state.defaultModelId === state.selectedModelId;
+
+    // Create action buttons container
+    const actionsHTML = `
+        <div class="main-image-actions" id="main-image-actions">
+            <button class="main-action-btn pin-btn" id="main-pin-btn" title="${isPinned ? 'Bỏ ghim ảnh mặc định' : 'Đặt làm ảnh mặc định'}">
+                <span class="material-symbols-outlined">${isPinned ? 'keep_off' : 'push_pin'}</span>
+                <span class="btn-label">${isPinned ? 'Bỏ ghim' : 'Đặt mặc định'}</span>
+            </button>
+            <button class="main-action-btn delete-btn" id="main-delete-btn" title="Xóa ảnh này">
+                <span class="material-symbols-outlined">delete</span>
+                <span class="btn-label">Xóa</span>
+            </button>
+        </div>
+    `;
+
+    imageWrapper.insertAdjacentHTML('beforeend', actionsHTML);
+
+    // Add event listeners
+    const pinBtn = document.getElementById('main-pin-btn');
+    const deleteBtn = document.getElementById('main-delete-btn');
+
+    if (pinBtn) {
+        pinBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (isPinned) {
+                await setDefaultModel(null);
+            } else {
+                await setDefaultModel(state.selectedModelId);
+            }
+        });
+    }
+
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            await deleteUserModel(state.selectedModelId);
+        });
+    }
+}
+
+function removeMainImageActions() {
+    const existingActions = document.getElementById('main-image-actions');
+    if (existingActions) {
+        existingActions.remove();
+    }
+}
+*/
+
+// ==========================================
+// INFINITE SCROLL FOR MODELS
+// ==========================================
+
+let modelsPage = 1;
+const MODELS_PER_PAGE = 10;
+
+function setupInfiniteScrollForModels(grid) {
+    if (!grid) return;
+
+    // Create Intersection Observer
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                // User scrolled near the bottom, load more models
+                loadMoreModels();
+            }
+        });
+    }, {
+        root: grid,
+        rootMargin: '50px', // Trigger 50px before reaching bottom
+        threshold: 0.1
+    });
+
+    // Observe the Add button (last element)
+    const addBtn = grid.querySelector('.add-model-card');
+    if (addBtn) {
+        observer.observe(addBtn);
+    }
+
+    // Store observer for cleanup
+    if (!grid._infiniteScrollObserver) {
+        grid._infiniteScrollObserver = observer;
+    }
+}
+
+async function loadMoreModels() {
+    // This is a placeholder for future pagination
+    // Currently all models are loaded at once
+    // In the future, you can implement:
+    // 1. Fetch more models from backend with pagination
+    // 2. Append to state.userModels
+    // 3. Re-render only new items
+    
+    console.log('[Infinite Scroll] Reached end of list');
+    // TODO: Implement pagination when backend supports it
+}
+
 async function deleteUserModel(modelId) {
+    // Prevent deleting mock data
+    if (!modelId || modelId.startsWith('mock')) {
+        showToast('Không thể xóa ảnh demo', 'warning');
+        return;
+    }
+
     if (!confirm(t('delete') + '?')) return;
 
     try {
@@ -522,6 +880,8 @@ async function deleteUserModel(modelId) {
             await loadUserModels();
             updateUI();
             showToast(t('photo_deleted'), 'success');
+        } else {
+            showToast(response?.error || t('photo_delete_error'), 'error');
         }
     } catch (error) {
         console.error('Failed to delete user model:', error);
@@ -533,22 +893,26 @@ async function setDefaultModel(modelId) {
     try {
         const response = await chrome.runtime.sendMessage({
             type: 'SET_DEFAULT_MODEL',
-            data: { modelId }
+            data: { modelId } // Can be null to unpin
         });
 
         if (response?.success) {
             state.defaultModelId = modelId;
 
-            // Also select this model
-            const model = state.userModels.find(m => m.id === modelId);
-            if (model) {
-                state.modelImage = model.url;
-                state.selectedModelId = modelId;
+            // If setting a model (not unpinning), also select it
+            if (modelId) {
+                const model = state.userModels.find(m => m.id === modelId);
+                if (model) {
+                    state.modelImage = model.url;
+                    state.selectedModelId = modelId;
+                }
+                showToast(t('default_set'), 'success');
+            } else {
+                showToast('Đã bỏ ghim ảnh mặc định', 'info');
             }
 
             renderUserModels();
             updateUI();
-            showToast(t('default_set'), 'success');
         }
     } catch (error) {
         console.error('Failed to set default model:', error);
@@ -627,9 +991,15 @@ async function checkPendingImage() {
     }
 }
 
-// Load saved model image
+// Load saved model image (but prioritize pinned/default model)
 async function loadModelImage() {
     try {
+        // If there's a pinned model, don't override it
+        if (state.defaultModelId && state.modelImage) {
+            console.log('[loadModelImage] Skipping - pinned model already loaded');
+            return;
+        }
+
         const response = await chrome.runtime.sendMessage({ type: 'GET_MODEL_IMAGE' });
         if (response?.imageUrl) {
             state.modelImage = response.imageUrl;
@@ -1053,26 +1423,30 @@ function updateUI() {
 
 
     // Update model image preview
-    const deleteBtn = document.getElementById('delete-model-btn');
+    const userModelsGrid = document.getElementById('user-models-grid');
+    if (userModelsGrid) {
+        userModelsGrid.classList.remove('hidden');
+    }
+
     if (state.modelImage && elements.modelImage) {
         elements.modelImage.src = state.modelImage;
         elements.modelImage.classList.remove('hidden');
+        elements.modelImage.style.objectFit = 'cover';
         elements.modelPlaceholder?.classList.add('hidden');
         elements.modelImageContainer?.classList.add('has-image');
-
-        // Show delete button
-        if (deleteBtn) deleteBtn.classList.remove('hidden');
+        
+        // Show action buttons on main image (if not mock data)
+        renderMainImageActions();
     } else if (elements.modelImage) {
         elements.modelImage.classList.add('hidden');
         elements.modelPlaceholder?.classList.remove('hidden');
         elements.modelImageContainer?.classList.remove('has-image');
-
-        // Hide delete button
-        if (deleteBtn) deleteBtn.classList.add('hidden');
+        
+        // Hide action buttons
+        removeMainImageActions();
     }
 
     // Update selected state in user models grid
-    const userModelsGrid = document.getElementById('user-models-grid');
     if (userModelsGrid) {
         userModelsGrid.querySelectorAll('.user-model-item').forEach(item => {
             const isSelected = item.dataset.id === state.selectedModelId;
@@ -1206,6 +1580,7 @@ function renderSelectedBubbles() {
     container.querySelectorAll('.bubble-remove-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            hideGlobalTooltip(); // Fix: Hide tooltip before element is removed/rendered
             const index = parseInt(btn.dataset.index);
             if (!isNaN(index) && state.selectedItems[index]) {
                 toggleClothingSelection(state.selectedItems[index]);
@@ -2544,29 +2919,7 @@ function setupEventListeners() {
     // });
 
 
-    // Model image container click - open upload if no image
-    elements.modelImageContainer?.addEventListener('click', (e) => {
-        // Prevent click if clicking delete button
-        if (e.target.closest('#delete-model-btn')) return;
-
-        if (!state.modelImage) {
-            elements.modelUploadInput?.click();
-        }
-    });
-
-    // Clear model button (Close/Unset)
-    const deleteModelBtn = document.getElementById('delete-model-btn');
-    deleteModelBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // Just clear current selection/view
-        state.modelImage = null;
-        state.selectedModelId = null;
-
-        renderUserModels(); // Update thumbnails state
-        updateUI();
-    });
-
-    // Handle model image upload
+    // Model upload input change handler
     elements.modelUploadInput?.addEventListener('change', async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -4016,6 +4369,8 @@ function updateUIStrings() {
     const authMessage = document.querySelector('.auth-section p');
     if (authMessage) authMessage.textContent = t('login_to_try');
 
+    // Social login buttons should remain as icons (circular)
+    /*
     const loginGoogleBtn = document.getElementById('login-google-btn');
     if (loginGoogleBtn) {
         const svg = loginGoogleBtn.querySelector('svg');
@@ -4026,6 +4381,7 @@ function updateUIStrings() {
         }
         loginGoogleBtn.appendChild(document.createTextNode(t('continue_google')));
     }
+    */
 
     // =====================================
     // LOADING OVERLAY
