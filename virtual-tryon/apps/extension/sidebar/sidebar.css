@@ -840,12 +840,21 @@ h6 {
   display: flex;
   gap: 8px;
   z-index: 5;
-  animation: fadeInUp 0.3s ease-out;
-  pointer-events: auto; /* Ensure buttons are clickable */
+  opacity: 0; /* Hidden by default */
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none; /* Don't block clicks when hidden */
+}
+
+/* Show on hover of parent container */
+.image-container.model-container.has-image:hover .main-image-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto; /* Enable clicks when visible */
 }
 
 .main-image-actions.hidden {
-  display: none;
+  display: none !important; /* Force hide when no image */
 }
 
 @keyframes fadeInUp {
