@@ -95,14 +95,15 @@ function renderCompareResultsPicker() {
     if (!grid) return;
 
     grid.innerHTML = state.results.map((result, idx) => {
-        const isSlotA = compareSlotA && compareSlotA.id === result.id;
-        const isSlotB = compareSlotB && compareSlotB.id === result.id;
+        const resultIdStr = String(result.id);
+        const isSlotA = compareSlotA && String(compareSlotA.id) === resultIdStr;
+        const isSlotB = compareSlotB && String(compareSlotB.id) === resultIdStr;
         const selectedClass = isSlotA ? 'selected-a' : (isSlotB ? 'selected-b' : '');
         const label = isSlotA ? 'A' : (isSlotB ? 'B' : '');
         const displayName = result.name || (t('result_number', { index: idx + 1 }) || `#${idx + 1}`);
 
         return `
-            <div class="compare-picker-item ${selectedClass}" data-result-id="${result.id}" title="${displayName}">
+            <div class="compare-picker-item ${selectedClass}" data-result-id="${resultIdStr}" title="${displayName}">
                 <img src="${result.imageUrl}" alt="${displayName}" loading="lazy" />
                 ${label ? `<div class="compare-picker-badge">${label}</div>` : ''}
             </div>
@@ -112,16 +113,15 @@ function renderCompareResultsPicker() {
     // Event listeners
     grid.querySelectorAll('.compare-picker-item').forEach(item => {
         item.addEventListener('click', () => {
-            const resultId = parseInt(item.dataset.resultId);
-            const result = state.results.find(r => r.id === resultId);
+            const resultIdStr = item.dataset.resultId;
+            const result = state.results.find(r => String(r.id) === resultIdStr);
             if (!result) return;
 
             // Logic: nếu đã là A thì bỏ, nếu đã là B thì bỏ, nếu chưa gán thì gán vào slot trống
-            if (compareSlotA && compareSlotA.id === resultId) {
-                // Click lại A → gán vào picker mode
+            if (compareSlotA && String(compareSlotA.id) === resultIdStr) {
                 return;
             }
-            if (compareSlotB && compareSlotB.id === resultId) {
+            if (compareSlotB && String(compareSlotB.id) === resultIdStr) {
                 return;
             }
 

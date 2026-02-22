@@ -245,71 +245,72 @@ interface PromptBuilderInput {
  * xử lý đúng với nhiều loại ảnh đầu vào không chuẩn.
  */
 function buildTryOnPrompt(input: PromptBuilderInput): string {
-  const { quality, clothingItems, totalImages } = input
+  const { systemPrompt, quality, clothingItems, totalImages } = input
 
-  // --- IMAGE MAPPING SECTION ---
-  const imageMapLines: string[] = [
-    `IMPORTANT - Image assignment:`,
-    `• Image 1 = The person/model to dress (may be full-body, half-body, seated, angled, or any pose)`,
-  ]
+  // --- CONCISE, DIRECT PROMPT — Gemini 2.5 Flash responds better to short, clear instructions ---
+
+  const lines: string[] = []
+
+  // CORE FRAMING: "Edit this photo" not "Generate a new image"
+  lines.push(`TASK: Virtual dressing room — EDIT the photo of the person in Image 1 by REPLACING their current clothing with the garment(s) from the other image(s). This is a PHOTO EDIT, not a new image generation.`)
+  lines.push(``)
+
+  // IDENTITY — strongest possible language, short
+  lines.push(`IDENTITY PRESERVATION (ABSOLUTE — ZERO TOLERANCE FOR VIOLATIONS):`)
+  lines.push(`• The output must look like THE SAME PHOTO of THE SAME PERSON, just wearing different clothes.`)
+  lines.push(`• Face: Preserve EVERY facial feature pixel-perfectly — eyes, nose, mouth, jawline, cheekbones, eyebrows, ears, facial hair, wrinkles, moles, skin complexion, skin tone. Do NOT alter ANY facial characteristic.`)
+  lines.push(`• Body: Same body shape, proportions, weight, height, pose, hand position, skin tone. Do NOT change the person's physique.`)
+  lines.push(`• Hair: Exact same hairstyle, hair color, hair length, hair texture.`)
+  lines.push(`• Background: Keep 100% identical — same scene, same lighting direction, same shadows.`)
+  lines.push(`• Do NOT change the person's ethnicity, age, or gender. Do NOT generate a new face. Do NOT reference any person from the clothing images.`)
+  lines.push(``)
+
+  // IMAGE MAP — which image is what
+  lines.push(`IMAGES PROVIDED:`)
+  lines.push(`• Image 1 = THE PERSON (preserve this person exactly in the output)`)
 
   clothingItems.forEach((item, idx) => {
     const imageNum = idx + 2
     const label = item.name || item.category
     const typeHint = describeClothingImageType(item.image_type)
-    const colorHint = item.color ? `, color: ${item.color}` : ''
-    const materialHint = item.material ? `, material: ${item.material}` : ''
-    imageMapLines.push(`• Image ${imageNum} = Clothing item: "${label}" (${item.category}${colorHint}${materialHint}) — photo type: ${typeHint}`)
+    const colorHint = item.color ? `, ${item.color}` : ''
+    lines.push(`• Image ${imageNum} = GARMENT TO WEAR: "${label}" (${item.category}${colorHint}) — ${typeHint}. If a person is visible, IGNORE that person entirely — extract ONLY the garment.`)
   })
 
-  // --- ANALYSIS INSTRUCTION SECTION ---
-  const analysisLines: string[] = [
-    `\nSTEP 1 — ANALYZE ALL IMAGES BEFORE PROCESSING:`,
-    `• Image 1 (person): Identify pose (standing/seated/angled), visible body parts, body proportions, existing clothing to replace, skin tone, lighting direction`,
-  ]
+  lines.push(``)
 
-  clothingItems.forEach((item, idx) => {
-    const imageNum = idx + 2
-    analysisLines.push(
-      `• Image ${imageNum} (clothing): Identify exact garment boundaries, color, fabric type, pattern, front/back orientation, fit style (slim/regular/oversized)`
-    )
-  })
+  // CLOTHING APPLICATION — concise
+  lines.push(`HOW TO APPLY:`)
+  lines.push(`1. Remove the person's current clothing in the relevant body area.`)
+  lines.push(`2. Dress them in the garment(s) from the other image(s).`)
+  lines.push(`3. Fit naturally to their body shape and pose — correct perspective, wrinkles, draping.`)
+  lines.push(`4. Match lighting, shadows, and color temperature to Image 1's environment.`)
+  lines.push(`5. Preserve the garment's exact color, pattern, texture, logos, and graphics.`)
 
-  // --- CONSTRAINTS SECTION (CRITICAL) ---
-  const applyLines: string[] = [
-    `\nSTEP 2 — STRICT CONSTRAINTS (CRITICAL):`,
-    `1. IDENTITY PRESERVATION (CRITICAL):`,
-    `   - The person's face, hair style, hair color, skin tone, body shape, and pose MUST remain exactly identical to Image 1.`,
-    `   - The background must remain completely unchanged.`,
-    `   - Any tattoos, accessories (unless explicitly replaced), and distinguishing features must be preserved.`,
-    `2. CLOTHING PLACEMENT (CRITICAL):`,
-    `   - Apply ALL ${clothingItems.length} clothing item(s) simultaneously to the person in Image 1.`,
-    `   - Fit the clothing naturally to the person's body proportions and pose, respecting gravity and drape.`,
-    `   - Layering order: Base layers first, outerwear last, accessories on top.`,
-    `   - If the person is not full-body, only apply the parts of the clothing that should be visible in the frame.`,
-    `3. COLOR & DESIGN ACCURACY (CRITICAL):`,
-    `   - The color, pattern, texture, and text/graphics on the clothing MUST match the source clothing images exactly.`,
-    `   - Do not hallucinate details or change the design of the garments.`,
-    `4. LIGHTING & SHADOWS:`,
-    `   - The lighting, highlights, and shadows on the clothing must match the environmental lighting of Image 1.`,
-  ]
+  if (clothingItems.length > 1) {
+    lines.push(`6. Layer correctly: base layers first, outerwear last.`)
+  }
 
-  // --- QUALITY SECTION ---
-  const qualityLine = quality === 'hd'
-    ? `\nOUTPUT: Ultra HD photorealistic result. Maximum detail in fabric texture, stitching, and fit. Zero visible AI artifacts. Seams between clothing and skin must be flawless.`
-    : `\nOUTPUT: High-quality photorealistic result. Clean edges, natural fabric appearance. No visible AI artifacts.`
+  lines.push(``)
 
-  // --- FALLBACK RULE ---
-  const fallbackLine = `\nFALLBACK: If any input image is unclear, make a best-effort attempt based on available information. Do NOT fail — always produce a photorealistic result.`
+  // QUALITY
+  if (quality === 'hd') {
+    lines.push(`QUALITY: Ultra HD photorealistic. Maximum fabric detail, zero AI artifacts, flawless skin-to-clothing boundaries.`)
+  } else {
+    lines.push(`QUALITY: Photorealistic result, clean edges, natural appearance, no visible AI artifacts.`)
+  }
 
-  return [
-    imageMapLines.join('\n'),
-    analysisLines.join('\n'),
-    applyLines.join('\n'),
-    qualityLine,
-    fallbackLine,
-    `\nTotal images provided: ${totalImages} (1 person + ${clothingItems.length} clothing)`,
-  ].join('\n')
+  // FINAL CHECK — one-liner
+  lines.push(``)
+  lines.push(`⚠️ VERIFY BEFORE OUTPUT: Is the person's face IDENTICAL to Image 1? Same body? Same background? If anything changed about the person — REDO. Only the clothes should be different.`)
+
+  // System prompt from ai_config
+  if (systemPrompt && systemPrompt.trim().length > 0) {
+    lines.push(``)
+    lines.push(`ADDITIONAL RULES: ${systemPrompt.trim()}`)
+  }
+
+  return lines.join('\n')
 }
 
 /**

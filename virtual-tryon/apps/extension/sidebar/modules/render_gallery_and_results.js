@@ -136,6 +136,22 @@ function renderSelectedBubbles() {
             }
         });
     });
+
+    // Clear all selection button (inside clothing image container)
+    const clearBtn = document.getElementById('clear-clothing-selection-btn');
+    if (clearBtn && !clearBtn.dataset.bound) {
+        clearBtn.dataset.bound = 'true';
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Clear all selected items
+            state.selectedItems = [];
+            state.clothingImage = null;
+            state.clothingSourceUrl = null;
+            saveSelectedItems();
+            if (window.updateUI) updateUI();
+            if (window.renderClothingHistory) renderClothingHistory();
+        });
+    }
 }
 
 function renderGalleryCard(result, isSelected) {

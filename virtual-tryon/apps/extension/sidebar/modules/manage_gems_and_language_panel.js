@@ -22,7 +22,7 @@ function toggleGemsPanel() {
     if (languagePanel && !languagePanel.classList.contains('hidden')) hideLanguagePanel();
     if (profileMenu && !profileMenu.classList.contains('hidden')) hideProfileMenu();
 
-    if (gemsPanel?.classList.contains('hidden')) showGemsPanel();
+    if (gemsPanel?.classList.contains('hidden')) window.showGemsPanel();
     else hideGemsPanel();
 }
 

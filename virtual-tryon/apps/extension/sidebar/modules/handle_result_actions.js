@@ -13,7 +13,7 @@
  * 4. deleteResult / clearAllResults → xóa kết quả
  */
 
-function addResult(imageUrl, clothingUrl, modelUrl, sourceUrl = null) {
+function addResult(imageUrl, clothingUrl, modelUrl, sourceUrl = null, tryonHistoryId = null) {
     // Không lưu base64 data URL cho clothing/model để tránh vượt quota storage
     // Chỉ giữ remote URL (http/https) cho việc hiển thị before/after
     const safeClothingUrl = (clothingUrl && !clothingUrl.startsWith('data:')) ? clothingUrl : null;
@@ -48,6 +48,7 @@ function addResult(imageUrl, clothingUrl, modelUrl, sourceUrl = null) {
             result_image_url: imageUrl,
             clothing_image_url: safeClothingUrl,
             model_image_url: safeModelUrl,
+            tryon_history_id: tryonHistoryId || null,
         }
     }).then(() => {
         renderCreatedOutfitsList();
@@ -63,7 +64,6 @@ function showResultInline(result) {
     const section = $('inline-result-section');
     const image = $('inline-result-image');
     const modelImage = $('inline-model-image');
-    const reportBtn = $('report-wrong-btn');
     if (!section || !image) return;
 
     // Phục vụ cơ chế fallback (fixBrokenImage)
@@ -95,12 +95,34 @@ function showResultInline(result) {
         }
     }
 
-    if (reportBtn) {
-        reportBtn.disabled = false;
-        reportBtn.textContent = t('report_wrong_btn');
+    // Show satisfaction bar for new results (not when clicking old outfit cards)
+    const satisfactionBar = $('satisfaction-bar');
+    if (satisfactionBar) {
+        // Only show for fresh try-on results (result has a recent timestamp)
+        const isFresh = result.timestamp && (Date.now() - result.timestamp < 60000);
+        if (isFresh) {
+            satisfactionBar.classList.remove('hidden');
+            // Reset button states
+            const satisfiedBtn = $('result-satisfied-btn');
+            const unsatisfiedBtn = $('result-unsatisfied-btn');
+            if (satisfiedBtn) satisfiedBtn.disabled = false;
+            if (unsatisfiedBtn) unsatisfiedBtn.disabled = false;
+        } else {
+            satisfactionBar.classList.add('hidden');
+        }
     }
+
     section.classList.remove('hidden');
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Recalculate before-image width after section becomes visible
+    requestAnimationFrame(() => {
+        const sliderContainer = document.querySelector('.image-comparison-slider');
+        const beforeImg = document.querySelector('.slider-image-before');
+        if (sliderContainer && beforeImg) {
+            beforeImg.style.width = `${sliderContainer.offsetWidth}px`;
+        }
+    });
 }
 
 function hideResultInline() {
@@ -345,27 +367,46 @@ async function handleUndoEdit() {
 }
 
 
-async function handleReportWrong() {
-    const reportBtn = $('report-wrong-btn');
-    if (reportBtn?.disabled) return;
+/**
+ * handleSatisfied — User confirms result is good
+ * Hides satisfaction bar, shows success toast
+ */
+function handleSatisfied() {
+    const satisfactionBar = $('satisfaction-bar');
+    if (satisfactionBar) satisfactionBar.classList.add('hidden');
+    showToast(t('result_confirmed') || '✅ Đã xác nhận kết quả', 'success');
+}
+
+/**
+ * handleUnsatisfied — User reports result is wrong
+ * Refunds gems and hides satisfaction bar
+ */
+async function handleUnsatisfied() {
+    const unsatisfiedBtn = $('result-unsatisfied-btn');
+    const satisfiedBtn = $('result-satisfied-btn');
+    if (unsatisfiedBtn?.disabled) return;
+
     try {
-        if (reportBtn) { reportBtn.disabled = true; reportBtn.textContent = '⏳...'; }
+        if (unsatisfiedBtn) unsatisfiedBtn.disabled = true;
+        if (satisfiedBtn) satisfiedBtn.disabled = true;
+
         const response = await chrome.runtime.sendMessage({
             type: 'REFUND_GEMS',
-            data: { reason: 'User reported wrong image', amount: GEM_COST_STANDARD }
+            data: { reason: 'User reported wrong identity in try-on result', amount: GEM_COST_STANDARD }
         });
+
         if (response?.success) {
             state.gemsBalance = response.newBalance !== undefined ? response.newBalance : state.gemsBalance + GEM_COST_STANDARD;
             updateUI();
-            showToast(t('refund_success'), 'success');
-            if (reportBtn) reportBtn.textContent = t('report_done_btn');
+            showToast(t('refund_success') || '💎 Đã hoàn gem thành công', 'success');
         } else {
             showToast(response?.error || t('error_occurred'), 'error');
-            if (reportBtn) { reportBtn.disabled = false; reportBtn.textContent = t('report_wrong_btn'); }
         }
     } catch (error) {
-        showToast(t('error_occurred'), 'error');
-        if (reportBtn) { reportBtn.disabled = false; reportBtn.textContent = t('report_wrong_btn'); }
+        showToast(t('error_occurred') || 'Lỗi khi hoàn gem', 'error');
+    } finally {
+        const satisfactionBar = $('satisfaction-bar');
+        if (satisfactionBar) satisfactionBar.classList.add('hidden');
     }
 }
 
@@ -599,17 +640,26 @@ function loadHiddenOutfitIds() {
 // ============================================================================
 
 /**
- * Hide an outfit from the "Outfit vừa tạo" list without deleting it.
+ * Move outfit to trash (soft-delete via API).
  * @param {string} id - Outfit ID
  */
-function hideOutfit(id) {
-    if (!state.hiddenOutfitIds) state.hiddenOutfitIds = [];
-    if (!state.hiddenOutfitIds.includes(id)) {
-        state.hiddenOutfitIds.push(id);
-        saveHiddenOutfitIds();
+async function hideOutfit(id) {
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: 'DELETE_OUTFIT',
+            data: { id }
+        });
+
+        if (response?.success) {
+            renderCreatedOutfitsList();
+            showToast(t('all_outfits.moved_to_trash') || 'Đã chuyển vào thùng rác', 'success');
+        } else {
+            throw new Error(response?.error || 'Unknown error');
+        }
+    } catch (err) {
+        console.error('[Fitly] hideOutfit failed:', err);
+        showToast(t('all_outfits.delete_error') || 'Không thể ẩn outfit', 'error');
     }
-    renderCreatedOutfitsList();
-    showToast(t('outfit_hidden') || 'Đã ẩn outfit', 'success');
 }
 
 /**
@@ -672,54 +722,19 @@ async function renderCreatedOutfitsList() {
     const section = document.getElementById('created-outfits-list-section');
     if (!listContainer || !section) return;
 
-    // Load persisted hidden IDs on first render
-    if (!state.hiddenOutfitIds) loadHiddenOutfitIds();
-
     try {
         const response = await chrome.runtime.sendMessage({ type: 'GET_OUTFITS', data: { limit: 20 } });
 
         if (response?.success && response.outfits?.length > 0) {
-            // STEP 1: Separate hidden / visible outfits
-            const allOutfits = response.outfits;
-            const hiddenIds = state.hiddenOutfitIds || [];
-            const visibleOutfits = state.showHiddenOutfits
-                ? allOutfits
-                : allOutfits.filter(o => !hiddenIds.includes(String(o.id)));
-            const hiddenCount = allOutfits.filter(o => hiddenIds.includes(String(o.id))).length;
-
-            // STEP 2: Update toggle button visibility in header
-            const toggleHiddenBtn = document.getElementById('toggle-hidden-outfits-btn');
-            if (toggleHiddenBtn) {
-                if (hiddenCount > 0) {
-                    toggleHiddenBtn.classList.remove('hidden');
-                    toggleHiddenBtn.textContent = state.showHiddenOutfits
-                        ? (t('hide_hidden') || 'Ẩn đi')
-                        : `${t('show_hidden') || 'Hiện ẩn'} (${hiddenCount})`;
-                } else {
-                    toggleHiddenBtn.classList.add('hidden');
-                    state.showHiddenOutfits = false;
-                }
-            }
-
-            if (visibleOutfits.length === 0 && !state.showHiddenOutfits) {
-                // All visible outfits are hidden — still show section with empty state
-                section.classList.remove('hidden');
-                listContainer.innerHTML = `<div class="outfits-empty-state">
-                    <span class="material-symbols-outlined" style="font-size:28px;color:#ccc;">visibility_off</span>
-                    <p style="font-size:12px;color:#aaa;margin:4px 0 0">${t('all_outfits_hidden') || 'Tất cả outfit đã bị ẩn'}</p>
-                </div>`;
-                return;
-            }
+            const visibleOutfits = response.outfits;
 
             section.classList.remove('hidden');
             listContainer.innerHTML = '';
 
             visibleOutfits.forEach(outfit => {
-                const isHidden = hiddenIds.includes(String(outfit.id));
 
-                // STEP 3: Build card element
                 const card = document.createElement('div');
-                card.className = `horizontal-outfit-card${isHidden ? ' outfit-is-hidden' : ''}`;
+                card.className = 'horizontal-outfit-card';
                 card.dataset.id = outfit.id;
 
                 // Image
@@ -762,29 +777,16 @@ async function renderCreatedOutfitsList() {
                     remixOutfit(outfit);
                 });
 
-                // Hide/Unhide button
+                // Trash button (soft-delete)
                 const hideBtn = document.createElement('button');
                 hideBtn.className = 'outfit-hide-btn';
-                if (isHidden) {
-                    hideBtn.title = t('unhide_outfit') || 'Hiện lại';
-                    hideBtn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
-                    hideBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        state.hiddenOutfitIds = (state.hiddenOutfitIds || []).filter(id => id !== String(outfit.id));
-                        saveHiddenOutfitIds();
-                        renderCreatedOutfitsList();
-                        showToast(t('outfit_unhidden') || 'Đã hiện lại outfit', 'success');
-                    });
-                } else {
-                    hideBtn.title = t('hide_outfit') || 'Ẩn outfit';
-                    hideBtn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span>';
-                    hideBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        // Animate card out then hide
-                        card.classList.add('outfit-hiding');
-                        setTimeout(() => hideOutfit(String(outfit.id)), 300);
-                    });
-                }
+                hideBtn.title = t('move_to_trash') || 'Cho vào thùng rác';
+                hideBtn.innerHTML = '<span class="material-symbols-outlined">delete</span>';
+                hideBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    card.classList.add('outfit-hiding');
+                    setTimeout(() => hideOutfit(String(outfit.id)), 300);
+                });
 
                 actionsEl.appendChild(remixBtn);
                 actionsEl.appendChild(hideBtn);
@@ -820,7 +822,8 @@ window.handleResultSave = handleResultSave;
 window.handleResultShare = handleResultShare;
 window.handleUseResultAsModel = handleUseResultAsModel;
 window.handleResultEdit = handleResultEdit;
-window.handleReportWrong = handleReportWrong;
+window.handleSatisfied = handleSatisfied;
+window.handleUnsatisfied = handleUnsatisfied;
 window.deleteResult = deleteResult;
 window.clearAllResults = clearAllResults;
 window.openResultPopup = openResultPopup;
@@ -839,3 +842,60 @@ window.toggleShowHiddenOutfits = toggleShowHiddenOutfits;
 window.loadHiddenOutfitIds = loadHiddenOutfitIds;
 window.handleUndoEdit = handleUndoEdit;
 window.handleResultRegenerate = handleResultRegenerate;
+
+// ============================================================================
+// INLINE BEFORE/AFTER SLIDER — Event Binding
+// ============================================================================
+
+/**
+ * initializeInlineSlider — Bind input event cho #slider-range
+ * Cập nhật .slider-image-before-wrapper width + .slider-handle left khi user kéo
+ */
+function initializeInlineSlider() {
+    const slider = document.getElementById('slider-range');
+    const sliderContainer = document.querySelector('.image-comparison-slider');
+    if (!slider || !sliderContainer) return;
+
+    const updateSlider = (value) => {
+        const beforeWrapper = document.querySelector('.slider-image-before-wrapper');
+        const handle = document.querySelector('.slider-handle');
+        if (beforeWrapper) beforeWrapper.style.width = `${value}%`;
+        if (handle) handle.style.left = `${value}%`;
+    };
+
+    // STEP 1: Set CSS variable for container width so before image aligns with after image
+    const updateContainerWidth = () => {
+        const containerWidth = sliderContainer.offsetWidth;
+        const beforeImg = document.querySelector('.slider-image-before');
+        if (beforeImg) {
+            beforeImg.style.width = `${containerWidth}px`;
+        }
+    };
+
+    // Update on load, resize, and image load
+    updateContainerWidth();
+    window.addEventListener('resize', updateContainerWidth);
+    const afterImg = document.getElementById('inline-result-image');
+    if (afterImg) {
+        afterImg.addEventListener('load', updateContainerWidth);
+    }
+    const beforeImg = document.getElementById('inline-model-image');
+    if (beforeImg) {
+        beforeImg.addEventListener('load', updateContainerWidth);
+    }
+
+    // STEP 2: Listen to range input event (works for both mouse drag and touch)
+    slider.addEventListener('input', (e) => {
+        updateSlider(parseInt(e.target.value, 10));
+    });
+
+    // STEP 3: Also handle change event as fallback
+    slider.addEventListener('change', (e) => {
+        updateSlider(parseInt(e.target.value, 10));
+    });
+
+    console.log('[Fitly] Inline before/after slider initialized');
+}
+
+// Expose for sidebar.js init — sidebar.js calls window.initializeCompareSlider()
+window.initializeCompareSlider = initializeInlineSlider;

@@ -187,6 +187,88 @@ export async function handleDeleteRecentClothing(data) {
 }
 
 /**
+ * handleDeleteWardrobeItem - Xoá trực tiếp wardrobe item từ Supabase DB + Storage
+ * Input: { itemId: string (UUID) }
+ * Output: { success: boolean, error?: string }
+ *
+ * Flow:
+ * 1. Lấy item info từ DB (để biết image_url → storage path)
+ * 2. Xoá record từ wardrobe_items table
+ * 3. Xoá file ảnh từ Storage bucket
+ * 4. Xoá khỏi demo_wardrobe local cache
+ */
+export async function handleDeleteWardrobeItem(data) {
+    if (!data.itemId) {
+        return { success: false, error: 'Item ID is required' };
+    }
+
+    try {
+        const { getAuthToken } = await import('./auth_state_manager.js');
+        const token = await getAuthToken();
+        if (!token) {
+            return { success: false, error: 'Not authenticated' };
+        }
+
+        const { supabase } = await import('../extension/config.js');
+
+        // STEP 1: Get item to find storage path
+        const { data: item, error: fetchErr } = await supabase
+            .from('wardrobe_items')
+            .select('id, image_url')
+            .eq('id', data.itemId)
+            .single();
+
+        if (fetchErr) {
+            console.warn('[Fitly] Could not fetch wardrobe item for delete:', fetchErr.message);
+            // Still try to delete the record even if we can't get storage path
+        }
+
+        // STEP 2: Delete DB record
+        const { error: deleteErr } = await supabase
+            .from('wardrobe_items')
+            .delete()
+            .eq('id', data.itemId);
+
+        if (deleteErr) {
+            console.error('[Fitly] Failed to delete wardrobe item from DB:', deleteErr.message);
+            return { success: false, error: deleteErr.message };
+        }
+
+        console.log('[Fitly] ✅ Wardrobe item deleted from DB:', data.itemId);
+
+        // STEP 3: Delete from Storage (best-effort, non-blocking)
+        if (item?.image_url) {
+            try {
+                const url = new URL(item.image_url);
+                const pathParts = url.pathname.split('/storage/v1/object/public/users/');
+                if (pathParts.length > 1) {
+                    const storagePath = pathParts[1];
+                    await supabase.storage.from('users').remove([storagePath]);
+                    console.log('[Fitly] ✅ Storage file deleted:', storagePath);
+                }
+            } catch (storageErr) {
+                // Non-critical: DB record already deleted
+                console.warn('[Fitly] Could not delete storage file:', storageErr.message);
+            }
+        }
+
+        // STEP 4: Also remove from demo_wardrobe local cache
+        const wardrobeStorage = await chrome.storage.local.get('demo_wardrobe');
+        let demoWardrobe = wardrobeStorage.demo_wardrobe || [];
+        const beforeLen = demoWardrobe.length;
+        demoWardrobe = demoWardrobe.filter(w => w.id !== data.itemId);
+        if (demoWardrobe.length !== beforeLen) {
+            await chrome.storage.local.set({ demo_wardrobe: demoWardrobe });
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('[Fitly] Exception in handleDeleteWardrobeItem:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
  * handleSaveClothingToWardrobe - Lưu một món đồ từ recent clothing vào wardrobe
  * Input: { imageUrl, sourceUrl, name, category }
  * Output: { success } hoặc { success: false, error }

@@ -269,6 +269,10 @@
         cannot_enable_demo: 'Không thể bật chế độ dùng thử',
         report_wrong_btn: 'Ảnh sai? Hoàn gem 💎',
         report_done_btn: '✓ Đã hoàn gem',
+        satisfaction_question: 'Kết quả có giống bạn không?',
+        satisfied: 'Hài lòng',
+        unsatisfied_refund: 'Sai, hoàn gem',
+        result_confirmed: '✅ Đã xác nhận kết quả',
         logout_error: 'Lỗi khi đăng xuất',
 
         // New Keys from Refactor
@@ -514,19 +518,33 @@
 
         // All Outfits (Select Looks)
         all_outfits: {
-            title: 'Chọn Looks',
+            title: 'Tủ đồ Outfit',
             tab_all: 'Tất cả',
             tab_favorites: 'Yêu thích',
+            tab_external: 'Từ web',
             tab_deleted: 'Đã ẩn',
+            tab_trash: 'Thùng rác',
             search_placeholder: 'Tìm outfit...',
             empty: 'Chưa có outfit. Thử đồ để xem ở đây.',
             empty_favorites: 'Chưa có outfit yêu thích',
+            empty_external: 'Chưa có outfit từ web',
             empty_deleted: 'Không có outfit đã ẩn',
+            empty_trash: 'Thùng rác trống',
             compare: 'So sánh',
             lookbook: 'Lookbook',
             select_two: 'Chọn ít nhất 2 outfit để so sánh',
             no_outfit_for_lookbook: 'Chưa chọn outfit nào cho Lookbook',
+            moved_to_trash: 'Đã chuyển vào thùng rác',
+            restored: 'Đã khôi phục outfit',
+            restore_error: 'Không thể khôi phục',
+            permanent_delete_confirm: 'Xoá vĩnh viễn outfit này?',
+            permanent_delete_msg: 'Hành động này không thể hoàn tác.',
+            permanently_deleted: 'Đã xoá vĩnh viễn',
+            delete_error: 'Không thể xoá outfit',
         },
+        days_remaining: 'ngày',
+        restore: 'Khôi phục',
+        delete_forever: 'Xoá hẳn',
 
         // Quality Warnings (Image Validation)
         quality_warning: {
@@ -547,6 +565,10 @@
             dismiss_all: '🚫 Không hiện cảnh báo cho các ảnh này',
             all_dismissed: '✓ Đã bỏ qua cảnh báo cho tất cả các ảnh',
         },
+
+        // Item History Carousel
+        item_history_title: 'Lịch sử item đã thử',
+        item_history_empty: 'Chưa có item nào',
 
     };
 })(typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : self));

@@ -269,6 +269,10 @@
         cannot_enable_demo: 'Cannot enable demo mode',
         report_wrong_btn: 'Wrong? Refund 💎',
         report_done_btn: '✓ Gem refunded',
+        satisfaction_question: 'Does this look like you?',
+        satisfied: 'Looks good',
+        unsatisfied_refund: 'Wrong, refund',
+        result_confirmed: '✅ Result confirmed',
         logout_error: 'Error logging out',
 
         // New Keys from Refactor
@@ -514,19 +518,31 @@
 
         // All Outfits (Select Looks)
         all_outfits: {
-            title: 'Select Looks',
+            title: 'Outfit Wardrobe',
             tab_all: 'All',
             tab_favorites: 'Favorites',
-            tab_deleted: 'Deleted',
+            tab_external: 'From Web',
+            tab_trash: 'Trash',
             search_placeholder: 'Search outfits...',
             empty: 'No outfits yet. Try on clothes to see them here.',
             empty_favorites: 'No favorite outfits yet',
-            empty_deleted: 'No hidden outfits',
+            empty_external: 'No outfits from web yet',
+            empty_trash: 'Trash is empty',
             compare: 'Compare',
             lookbook: 'Lookbook',
             select_two: 'Select at least 2 outfits to compare',
             no_outfit_for_lookbook: 'No outfit selected for Lookbook',
+            moved_to_trash: 'Moved to trash',
+            restored: 'Outfit restored',
+            restore_error: 'Could not restore outfit',
+            permanent_delete_confirm: 'Permanently delete this outfit?',
+            permanent_delete_msg: 'This action cannot be undone.',
+            permanently_deleted: 'Permanently deleted',
+            delete_error: 'Could not delete outfit',
         },
+        days_remaining: 'days',
+        restore: 'Restore',
+        delete_forever: 'Delete forever',
 
         // Quality Warnings (Image Validation)
         quality_warning: {
@@ -547,6 +563,10 @@
             dismiss_all: '🚫 Don\'t show warnings for these images',
             all_dismissed: '✓ Warnings dismissed for all images',
         },
+
+        // Item History Carousel
+        item_history_title: 'Tried Items History',
+        item_history_empty: 'No items yet',
 
     };
 })(typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : self));

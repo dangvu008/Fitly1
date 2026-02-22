@@ -200,7 +200,9 @@ function setupEventListeners() {
             }
         });
     });
-    $('report-wrong-btn')?.addEventListener('click', () => handleReportWrong());
+    // Satisfaction confirmation buttons
+    $('result-satisfied-btn')?.addEventListener('click', () => handleSatisfied());
+    $('result-unsatisfied-btn')?.addEventListener('click', () => handleUnsatisfied());
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {

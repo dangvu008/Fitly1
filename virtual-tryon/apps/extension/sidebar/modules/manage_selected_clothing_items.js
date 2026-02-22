@@ -215,23 +215,32 @@ function renderClothingHistory() {
         return;
     }
 
-    grid.innerHTML = filteredClothing.map(item => {
+    // STEP 2: Filter out hidden items — they should not appear at all
+    const visibleClothing = filteredClothing.filter(item => {
+        const itemKey = item.id || item.imageUrl;
+        return !hiddenClothingIds.has(itemKey);
+    });
+
+    if (visibleClothing.length === 0) {
+        grid.innerHTML = `<div class="clothing-history-empty">${t('clothing_history.empty_category') || 'Chưa có item nào trong danh mục này'}</div>`;
+        return;
+    }
+
+    grid.innerHTML = visibleClothing.map(item => {
         const isSelected = state.selectedItems.some(i => i.imageUrl === item.imageUrl);
         const isSaved = item.saved;
         const hasSourceUrl = item.sourceUrl && item.sourceUrl.startsWith('http');
         const isLocalUpload = item.sourceType === 'local_upload';
         const poseLabel = item.name || item.pose || t('clothing_history.default_pose');
-        const itemKey = item.id || item.imageUrl;
-        const isHidden = hiddenClothingIds.has(itemKey);
 
         return `
-            <div class="clothing-history-item ${isSelected ? 'selected' : ''} ${isSaved ? 'saved' : ''} ${hasSourceUrl ? 'has-source' : ''} ${isHidden ? 'item-hidden' : ''}"
+            <div class="clothing-history-item ${isSelected ? 'selected' : ''} ${isSaved ? 'saved' : ''} ${hasSourceUrl ? 'has-source' : ''}"
                  data-id="${item.id || ''}"
                  data-url="${item.imageUrl}"
                  data-source-url="${item.sourceUrl || ''}"
                  data-source-type="${item.sourceType || 'online'}"
                  data-cached-key="${item.cachedKey || item.id || ''}"
-                 title="${isHidden ? 'Đang ẩn - Click 👁 để hiện lại' : (isSaved ? t('clothing_history.saved_tooltip') : t('clothing_history.select_tooltip'))}${hasSourceUrl ? ` • ${t('clothing_history.has_link_tooltip')}` : ''}${isLocalUpload ? ` • ${t('clothing_history.local_upload_tooltip')}` : ''}">
+                 title="${isSaved ? t('clothing_history.saved_tooltip') : t('clothing_history.select_tooltip')}${hasSourceUrl ? ` • ${t('clothing_history.has_link_tooltip')}` : ''}${isLocalUpload ? ` • ${t('clothing_history.local_upload_tooltip')}` : ''}">
                 <img src="${item.imageUrl}" alt="Clothing" loading="lazy"
                      referrerpolicy="no-referrer" crossorigin="anonymous"
                      data-cache-key="${item.cachedKey || item.id || ''}">
@@ -240,13 +249,15 @@ function renderClothingHistory() {
                 </div>
                 <div class="status-dot"></div>
                 ${item.tryCount > 1 ? `<span class="clothing-try-count">×${item.tryCount}</span>` : ''}
-                ${!isHidden ? `<button class="clothing-quick-try" data-action="quick-try" title="${t('clothing_history.quick_try_tooltip')}">
+                <button class="clothing-quick-try" data-action="quick-try" title="${t('clothing_history.quick_try_tooltip')}">
                     ✨ ${t('clothing_history.quick_try_button')}
-                </button>` : ''}
+                </button>
+                <button class="clothing-hide-toggle" data-action="hide" title="Tắt item">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
                 <div class="clothing-item-actions">
-                    <button class="clothing-action-btn hide-btn" data-action="hide" title="${isHidden ? 'Hiện item' : 'Ẩn item'}">${isHidden ? '👁' : '🙈'}</button>
-                    ${hasSourceUrl && !isHidden ? `<button class="clothing-action-btn visit-btn" data-action="visit" title="${t('clothing_history.visit_product_page')}">🛒</button>` : ''}
-                    ${!isSaved && !isHidden ? `<button class="clothing-action-btn save-btn" data-action="save" title="${t('clothing_history.save_to_collection')}">♥</button>` : ''}
+                    ${hasSourceUrl ? `<button class="clothing-action-btn visit-btn" data-action="visit" title="${t('clothing_history.visit_product_page')}">🛒</button>` : ''}
+                    ${!isSaved ? `<button class="clothing-action-btn save-btn" data-action="save" title="${t('clothing_history.save_to_collection')}">♥</button>` : ''}
                     <button class="clothing-action-btn delete-btn" data-action="delete" title="${t('delete')}">×</button>
                 </div>
             </div>
@@ -294,10 +305,19 @@ function renderClothingHistory() {
     });
 
     grid.querySelectorAll('.clothing-history-item').forEach(item => {
+        // Hide toggle button — always visible, dedicated listener
+        const hideToggle = item.querySelector('.clothing-hide-toggle');
+        if (hideToggle) {
+            hideToggle.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const url = item.dataset.url;
+                const id = item.dataset.id;
+                await toggleHideClothingItem(id, url);
+            });
+        }
+
         item.addEventListener('click', (e) => {
-            if (e.target.closest('.clothing-item-actions')) return;
-            // STEP 1: Block click-to-select on hidden items
-            if (item.classList.contains('item-hidden')) return;
+            if (e.target.closest('.clothing-item-actions') || e.target.closest('.clothing-hide-toggle')) return;
             const url = item.dataset.url;
             const sourceUrl = item.dataset.sourceUrl;
             const id = item.dataset.id;
@@ -319,9 +339,7 @@ function renderClothingHistory() {
                 const id = item.dataset.id;
                 const sourceUrl = item.dataset.sourceUrl;
 
-                if (action === 'hide') {
-                    await toggleHideClothingItem(id, url);
-                } else if (action === 'delete') {
+                if (action === 'delete') {
                     await deleteClothingFromHistory(id, url);
                 } else if (action === 'save') {
                     await saveClothingToWardrobe(url);

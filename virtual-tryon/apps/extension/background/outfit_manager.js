@@ -4,7 +4,8 @@
  * Layer: Application / Feature
  *
  * Data Contract:
- * - Exports: handleSaveOutfit, handleGetOutfits, handleGetTryonHistory
+ * - Exports: handleSaveOutfit, handleGetOutfits, handleGetTryonHistory,
+ *            handleDeleteOutfit, handleGetDeletedOutfits, handleRestoreOutfit, handlePermanentDeleteOutfit
  *
  * Storage strategy:
  * - Authenticated user: ghi vào bảng `saved_outfits` trên Supabase (persistent, cross-device)
@@ -97,6 +98,17 @@ export async function handleSaveOutfit(data) {
         const token = await getAuthToken();
         if (!token) throw new Error('NOT_AUTHENTICATED');
 
+        // Lấy user_id từ JWT sub claim — bắt buộc để RLS policy WITH CHECK (auth.uid() = user_id) pass
+        let userId;
+        try {
+            const parts = token.split('.');
+            const payload = JSON.parse(atob(parts[1]));
+            userId = payload.sub;
+        } catch {
+            throw new Error('CANNOT_EXTRACT_USER_ID');
+        }
+        if (!userId) throw new Error('USER_ID_NOT_FOUND');
+
         const response = await fetch(
             `${SUPABASE_AUTH_URL}/rest/v1/saved_outfits`,
             {
@@ -107,7 +119,7 @@ export async function handleSaveOutfit(data) {
                     'Content-Type': 'application/json',
                     'Prefer': 'return=representation',
                 },
-                body: JSON.stringify(outfitPayload),
+                body: JSON.stringify({ ...outfitPayload, user_id: userId }),
             }
         );
 
@@ -169,7 +181,7 @@ export async function handleGetOutfits(data = {}) {
         if (!token) throw new Error('NOT_AUTHENTICATED');
 
         const response = await fetch(
-            `${SUPABASE_AUTH_URL}/rest/v1/saved_outfits?order=created_at.desc&limit=${limit}&select=id,name,result_image_url,clothing_image_url,model_image_url,tryon_history_id,source_type,source_url,created_at`,
+            `${SUPABASE_AUTH_URL}/rest/v1/saved_outfits?deleted_at=is.null&order=created_at.desc&limit=${limit}&select=id,name,result_image_url,clothing_image_url,model_image_url,tryon_history_id,source_type,source_url,created_at`,
             {
                 method: 'GET',
                 headers: {
@@ -250,6 +262,204 @@ export async function handleGetTryonHistory(data = {}) {
     } catch (error) {
         console.error('[Fitly] handleGetTryonHistory error:', error);
         return { success: false, error: error.message, history: [] };
+    }
+}
+
+// ============================================================================
+// DELETE OUTFIT
+// ============================================================================
+
+/**
+ * Soft-delete outfit — set deleted_at = NOW(). Khôi phục được trong 30 ngày.
+ */
+export async function handleDeleteOutfit(data) {
+    const outfitId = data?.id;
+    if (!outfitId) return { success: false, error: 'MISSING_OUTFIT_ID' };
+
+    const demoMode = await isDemoMode();
+
+    if (demoMode) {
+        demoState.outfits = (demoState.outfits || []).filter(o => String(o.id) !== String(outfitId));
+        const localOutfits = await loadLocalOutfits();
+        await saveLocalOutfits(localOutfits.filter(o => String(o.id) !== String(outfitId)));
+        return { success: true };
+    }
+
+    // STEP 1: Soft-delete — PATCH deleted_at
+    try {
+        const token = await getAuthToken();
+        if (!token) throw new Error('NOT_AUTHENTICATED');
+
+        const response = await fetch(
+            `${SUPABASE_AUTH_URL}/rest/v1/saved_outfits?id=eq.${outfitId}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'apikey': SUPABASE_AUTH_KEY,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ deleted_at: new Date().toISOString() }),
+            }
+        );
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.warn('[OutfitManager] Soft-delete failed:', response.status, errText);
+        } else {
+            log('[OutfitManager] Soft-deleted outfit:', outfitId);
+        }
+    } catch (error) {
+        console.warn('[OutfitManager] Cloud soft-delete failed:', error.message);
+    }
+
+    // STEP 2: Remove from local cache (active list)
+    try {
+        const localOutfits = await loadLocalOutfits();
+        await saveLocalOutfits(localOutfits.filter(o => String(o.id) !== String(outfitId)));
+    } catch (e) {
+        console.warn('[OutfitManager] Local cleanup failed:', e.message);
+    }
+
+    return { success: true };
+}
+
+// ============================================================================
+// GET DELETED OUTFITS (Trash Bin)
+// ============================================================================
+
+/**
+ * Lấy danh sách outfit đã soft-delete (thùng rác).
+ * Tự động purge items > 30 ngày.
+ */
+export async function handleGetDeletedOutfits(data = {}) {
+    const limit = Math.min(data?.limit || 50, 100);
+    const demoMode = await isDemoMode();
+    if (demoMode) return { success: true, outfits: [], total: 0 };
+
+    try {
+        const token = await getAuthToken();
+        if (!token) throw new Error('NOT_AUTHENTICATED');
+
+        const response = await fetch(
+            `${SUPABASE_AUTH_URL}/rest/v1/saved_outfits?deleted_at=not.is.null&order=deleted_at.desc&limit=${limit}&select=id,name,result_image_url,clothing_image_url,model_image_url,deleted_at,created_at`,
+            {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'apikey': SUPABASE_AUTH_KEY,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const deletedOutfits = await response.json();
+
+        // Auto-purge > 30 days
+        const now = Date.now();
+        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+        const toPurge = deletedOutfits.filter(o => now - new Date(o.deleted_at).getTime() > THIRTY_DAYS);
+        const toKeep = deletedOutfits.filter(o => now - new Date(o.deleted_at).getTime() <= THIRTY_DAYS);
+
+        // Purge expired in background (fire-and-forget)
+        if (toPurge.length > 0) {
+            toPurge.forEach(o => {
+                handlePermanentDeleteOutfit({ id: o.id }).catch(() => { });
+            });
+            log('[OutfitManager] Auto-purged', toPurge.length, 'expired trash items');
+        }
+
+        // Add daysRemaining for UI
+        const outfitsWithDays = toKeep.map(o => ({
+            ...o,
+            daysRemaining: Math.max(0, Math.ceil((THIRTY_DAYS - (now - new Date(o.deleted_at).getTime())) / (24 * 60 * 60 * 1000))),
+        }));
+
+        return { success: true, outfits: outfitsWithDays, total: outfitsWithDays.length };
+    } catch (error) {
+        console.warn('[OutfitManager] GET_DELETED_OUTFITS error:', error.message);
+        return { success: true, outfits: [], total: 0 };
+    }
+}
+
+// ============================================================================
+// RESTORE OUTFIT (from Trash)
+// ============================================================================
+
+/**
+ * Khôi phục outfit từ thùng rác — set deleted_at = null.
+ */
+export async function handleRestoreOutfit(data) {
+    const outfitId = data?.id;
+    if (!outfitId) return { success: false, error: 'MISSING_OUTFIT_ID' };
+
+    try {
+        const token = await getAuthToken();
+        if (!token) throw new Error('NOT_AUTHENTICATED');
+
+        const response = await fetch(
+            `${SUPABASE_AUTH_URL}/rest/v1/saved_outfits?id=eq.${outfitId}`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'apikey': SUPABASE_AUTH_KEY,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ deleted_at: null }),
+            }
+        );
+
+        if (!response.ok) {
+            const errText = await response.text();
+            return { success: false, error: errText };
+        }
+
+        log('[OutfitManager] Restored outfit:', outfitId);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================================================
+// PERMANENT DELETE OUTFIT
+// ============================================================================
+
+/**
+ * Xoá vĩnh viễn outfit — DELETE thực sự từ Supabase.
+ */
+export async function handlePermanentDeleteOutfit(data) {
+    const outfitId = data?.id;
+    if (!outfitId) return { success: false, error: 'MISSING_OUTFIT_ID' };
+
+    try {
+        const token = await getAuthToken();
+        if (!token) throw new Error('NOT_AUTHENTICATED');
+
+        const response = await fetch(
+            `${SUPABASE_AUTH_URL}/rest/v1/saved_outfits?id=eq.${outfitId}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'apikey': SUPABASE_AUTH_KEY,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        if (!response.ok) {
+            const errText = await response.text();
+            return { success: false, error: errText };
+        }
+
+        log('[OutfitManager] Permanently deleted outfit:', outfitId);
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
     }
 }
 

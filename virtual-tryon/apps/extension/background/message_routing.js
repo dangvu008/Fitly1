@@ -11,10 +11,10 @@ import { handleGetAuthState, handleEnableGuestMode, handleEmailLogin, handleEmai
 import { handleFetchImage } from './fetch_image_proxy_bypass_cors.js';
 import { handleAddToWardrobe, handleGetWardrobe } from './wardrobe_manager.js';
 import { handleContextTryonImage, handleContextAddWardrobe } from './context_menus.js';
-import { handleGetRecentClothing, handleSaveRecentClothing, handleDeleteRecentClothing, handleSaveClothingToWardrobe } from './recent_clothing_manager.js';
+import { handleGetRecentClothing, handleSaveRecentClothing, handleDeleteRecentClothing, handleSaveClothingToWardrobe, handleDeleteWardrobeItem } from './recent_clothing_manager.js';
 import { handleProcessTryOn, handleRefundGems } from './process_tryon.js';
 import { handleEditImage } from './process_edit.js';
-import { handleSaveOutfit, handleGetOutfits, handleGetTryonHistory } from './outfit_manager.js';
+import { handleSaveOutfit, handleGetOutfits, handleGetTryonHistory, handleDeleteOutfit, handleGetDeletedOutfits, handleRestoreOutfit, handlePermanentDeleteOutfit } from './outfit_manager.js';
 import { handleGetUserModels, handleAddUserModel, handleDeleteUserModel, handleSetDefaultModel, handleGetDefaultModel, handleSaveModelImage, handleGetModelImage, handleGetSampleModels, handleGetSampleClothing } from './user_model_manager.js';
 import { handleUpdateSettings, handleGetSettings } from './settings_manager.js';
 import { syncToCloud, syncFromCloud } from './cloud_sync.js';
@@ -60,6 +60,14 @@ export async function handleMessage(message, sender) {
                 return await handleSaveOutfit(message.data);
             case 'GET_OUTFITS':
                 return await handleGetOutfits(message.data);
+            case 'DELETE_OUTFIT':
+                return await handleDeleteOutfit(message.data);
+            case 'GET_DELETED_OUTFITS':
+                return await handleGetDeletedOutfits(message.data);
+            case 'RESTORE_OUTFIT':
+                return await handleRestoreOutfit(message.data);
+            case 'PERMANENT_DELETE_OUTFIT':
+                return await handlePermanentDeleteOutfit(message.data);
             case 'IMAGE_SELECTED':
                 await chrome.storage.session.set({
                     pending_clothing_image: message.imageUrl
@@ -85,6 +93,8 @@ export async function handleMessage(message, sender) {
                 return await handleSaveRecentClothing(message.data);
             case 'DELETE_RECENT_CLOTHING':
                 return await handleDeleteRecentClothing(message.data);
+            case 'DELETE_WARDROBE_ITEM':
+                return await handleDeleteWardrobeItem(message.data);
             case 'SAVE_CLOTHING_TO_WARDROBE':
                 return await handleSaveClothingToWardrobe(message.data);
             case 'SAVE_TO_WARDROBE':

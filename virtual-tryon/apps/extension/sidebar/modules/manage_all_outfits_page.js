@@ -3,7 +3,7 @@
  * Purpose: Quản lý màn hình "All Outfits" (Select Looks) — grid 2 cột, filter, select, compare, lookbook
  * Layer: Presentation
  *
- * Input: state.results (local try-on), GET_OUTFITS (saved outfits), state.hiddenOutfitIds
+ * Input: state.results (local try-on), GET_OUTFITS (saved outfits), GET_DELETED_OUTFITS (trash)
  * Output: DOM updates cho all-outfits-section
  *
  * Flow:
@@ -18,6 +18,7 @@
 // STATE
 // ==========================================
 let allOutfitsData = []; // Merged list of all outfits
+let allOutfitsDeletedData = []; // Outfits in trash bin
 let allOutfitsActiveTab = 'all';
 let allOutfitsSelectedIds = [];
 let allOutfitsFavoriteIds = [];
@@ -67,11 +68,8 @@ async function openAllOutfits() {
     const section = document.getElementById('all-outfits-section');
     if (!section) return;
 
-    // STEP 1: Load favorites + hidden IDs
+    // STEP 1: Load favorites
     loadFavoriteOutfitIds();
-    if (!state.hiddenOutfitIds) {
-        if (window.loadHiddenOutfitIds) loadHiddenOutfitIds();
-    }
 
     // STEP 2: Save visibility state BEFORE hiding
     const inlineResultEl = document.getElementById('inline-result-section');
@@ -140,10 +138,10 @@ async function loadAllOutfitsData() {
                     clothingUrl: outfit.clothing_image_url,
                     modelUrl: outfit.model_image_url,
                     timestamp: outfit.created_at ? new Date(outfit.created_at).getTime() : Date.now(),
-                    matchPercentage: outfit.match_percentage || Math.floor(Math.random() * 20 + 78),
+
                     tags: outfit.tags || [],
                     source: outfit.source_type || 'ai',
-                    isHidden: (state.hiddenOutfitIds || []).includes(String(outfit.id)),
+                    isHidden: false,
                 });
             });
         }
@@ -152,11 +150,16 @@ async function loadAllOutfitsData() {
     }
 
     // STEP 2: Merge local try-on results if not already in saved
+    // Dedup by BOTH id AND imageUrl to prevent duplicates when local result
+    // (numeric ID) was already saved to DB (UUID) — same image, different IDs
     if (state.results && state.results.length > 0) {
         const existingIds = new Set(allOutfitsData.map(o => o.id));
+        const existingImageUrls = new Set(allOutfitsData.map(o => o.imageUrl).filter(Boolean));
         state.results.forEach(result => {
             const rid = String(result.id);
-            if (!existingIds.has(rid)) {
+            const isDuplicateById = existingIds.has(rid);
+            const isDuplicateByImage = result.imageUrl && existingImageUrls.has(result.imageUrl);
+            if (!isDuplicateById && !isDuplicateByImage) {
                 allOutfitsData.push({
                     id: rid,
                     name: result.name || t('gallery.outfit_name', { id: result.id }) || `Outfit #${result.id}`,
@@ -164,7 +167,7 @@ async function loadAllOutfitsData() {
                     clothingUrl: result.clothingUrl,
                     modelUrl: result.modelUrl,
                     timestamp: result.timestamp || Date.now(),
-                    matchPercentage: result.matchPercentage || Math.floor(Math.random() * 20 + 78),
+
                     tags: result.tag ? [result.tag] : [],
                     source: 'local',
                     isHidden: false,
@@ -175,6 +178,34 @@ async function loadAllOutfitsData() {
 
     // STEP 3: Sort by timestamp desc
     allOutfitsData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    // STEP 4: Load trash bin data if on deleted tab
+    if (allOutfitsActiveTab === 'deleted') {
+        await loadDeletedOutfitsData();
+    }
+}
+
+async function loadDeletedOutfitsData() {
+    try {
+        const response = await chrome.runtime.sendMessage({ type: 'GET_DELETED_OUTFITS', data: { limit: 50 } });
+        if (response?.success && response.outfits?.length > 0) {
+            allOutfitsDeletedData = response.outfits.map(outfit => ({
+                id: String(outfit.id),
+                name: outfit.name || 'Outfit',
+                imageUrl: outfit.result_image_url,
+                clothingUrl: outfit.clothing_image_url,
+                modelUrl: outfit.model_image_url,
+                deletedAt: outfit.deleted_at,
+                daysRemaining: outfit.daysRemaining ?? 30,
+                timestamp: outfit.created_at ? new Date(outfit.created_at).getTime() : Date.now(),
+            }));
+        } else {
+            allOutfitsDeletedData = [];
+        }
+    } catch (err) {
+        console.warn('[AllOutfits] Failed to load deleted outfits:', err);
+        allOutfitsDeletedData = [];
+    }
 }
 
 // ==========================================
@@ -182,19 +213,23 @@ async function loadAllOutfitsData() {
 // ==========================================
 
 function getFilteredOutfits() {
+    // STEP 1: Tab filter
+    if (allOutfitsActiveTab === 'deleted') {
+        // Trash tab uses separate data source
+        let filtered = [...allOutfitsDeletedData];
+        if (allOutfitsSearchQuery.trim()) {
+            const q = allOutfitsSearchQuery.toLowerCase().trim();
+            filtered = filtered.filter(o => (o.name || '').toLowerCase().includes(q));
+        }
+        return filtered;
+    }
+
     let filtered = [...allOutfitsData];
 
-    // STEP 1: Tab filter
-    switch (allOutfitsActiveTab) {
-        case 'favorites':
-            filtered = filtered.filter(o => allOutfitsFavoriteIds.includes(o.id));
-            break;
-        case 'deleted':
-            filtered = filtered.filter(o => o.isHidden);
-            break;
-        default: // 'all'
-            filtered = filtered.filter(o => !o.isHidden);
-            break;
+    if (allOutfitsActiveTab === 'favorites') {
+        filtered = filtered.filter(o => allOutfitsFavoriteIds.includes(o.id));
+    } else if (allOutfitsActiveTab === 'external') {
+        filtered = filtered.filter(o => o.source === 'external');
     }
 
     // STEP 2: Search filter
@@ -209,10 +244,16 @@ function getFilteredOutfits() {
     return filtered;
 }
 
-function switchAllOutfitsTab(tab) {
+async function switchAllOutfitsTab(tab) {
     allOutfitsActiveTab = tab;
     allOutfitsSelectedIds = [];
     updateAllOutfitsTabs();
+
+    // Load trash data when switching to deleted tab
+    if (tab === 'deleted') {
+        await loadDeletedOutfitsData();
+    }
+
     renderAllOutfitsGrid();
     updateAllOutfitsBottomBar();
 }
@@ -239,19 +280,26 @@ function renderAllOutfitsGrid() {
         const emptyMsg = allOutfitsActiveTab === 'favorites'
             ? (t('all_outfits.empty_favorites') || 'Chưa có outfit yêu thích')
             : allOutfitsActiveTab === 'deleted'
-                ? (t('all_outfits.empty_deleted') || 'Không có outfit đã ẩn')
-                : (t('all_outfits.empty') || 'Chưa có outfit nào');
+                ? (t('all_outfits.empty_trash') || 'Thùng rác trống')
+                : allOutfitsActiveTab === 'external'
+                    ? (t('all_outfits.empty_external') || 'Chưa có outfit từ web')
+                    : (t('all_outfits.empty') || 'Chưa có outfit nào');
+        const emptyIcon = allOutfitsActiveTab === 'deleted' ? 'delete'
+            : allOutfitsActiveTab === 'external' ? 'language'
+                : 'checkroom';
 
         grid.innerHTML = `
             <div class="ao-empty-state">
-                <span class="material-symbols-outlined">checkroom</span>
+                <span class="material-symbols-outlined">${emptyIcon}</span>
                 <p>${emptyMsg}</p>
             </div>
         `;
         return;
     }
 
-    grid.innerHTML = filtered.map(outfit => renderAllOutfitCard(outfit)).join('');
+    grid.innerHTML = filtered.map(outfit =>
+        allOutfitsActiveTab === 'deleted' ? renderTrashCard(outfit) : renderAllOutfitCard(outfit)
+    ).join('');
 
     // STEP 2: Attach event listeners
     grid.querySelectorAll('.ao-card').forEach(card => {
@@ -267,6 +315,12 @@ function renderAllOutfitsGrid() {
         card.querySelector('.ao-fav-btn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             toggleFavorite(id);
+        });
+
+        // Delete button
+        card.querySelector('.ao-del-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteOutfit(id);
         });
 
         // Click card → view detail
@@ -288,12 +342,36 @@ function renderAllOutfitsGrid() {
             }, { once: true });
         }
     });
+
+    // Trash card event listeners
+    grid.querySelectorAll('.ao-trash-card').forEach(card => {
+        const id = card.dataset.id;
+
+        card.querySelector('.ao-restore-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            restoreOutfit(id);
+        });
+
+        card.querySelector('.ao-perm-del-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            permanentDeleteOutfit(id);
+        });
+
+        // Fix broken images
+        const img = card.querySelector('.ao-card-img');
+        if (img) {
+            img.addEventListener('error', function () {
+                if (this.dataset.fixed) return;
+                this.dataset.fixed = 'true';
+                if (window.fixBrokenImage) fixBrokenImage(this);
+            }, { once: true });
+        }
+    });
 }
 
 function renderAllOutfitCard(outfit) {
     const isSelected = allOutfitsSelectedIds.includes(outfit.id);
     const isFav = allOutfitsFavoriteIds.includes(outfit.id);
-    const matchPct = outfit.matchPercentage || 0;
 
     // Generate style tags
     const styleTags = generateStyleTags(outfit);
@@ -301,20 +379,19 @@ function renderAllOutfitCard(outfit) {
         ? styleTags.map(tag => `<span class="ao-style-tag">${escapeHtml(tag)}</span>`).join('')
         : '';
 
-    // Color swatch for match percentage — derive from match
-    const swatchColor = matchPct >= 90 ? '#C4646A' : matchPct >= 80 ? '#D4A47C' : '#A0A0A0';
-
     return `
         <div class="ao-card ${isSelected ? 'ao-card--selected' : ''}" data-id="${outfit.id}">
             <div class="ao-card-image-wrap">
                 <img src="${outfit.imageUrl}" alt="${escapeHtml(outfit.name)}" class="ao-card-img" loading="lazy"
                      referrerpolicy="no-referrer" crossorigin="anonymous">
-                <div class="ao-match-badge">${matchPct}% Match</div>
                 <div class="ao-card-check ${isSelected ? 'checked' : ''}">
                     <span class="material-symbols-outlined">${isSelected ? 'check_circle' : 'radio_button_unchecked'}</span>
                 </div>
                 <button class="ao-fav-btn ${isFav ? 'ao-fav-btn--active' : ''}" title="${isFav ? 'Unfavorite' : 'Favorite'}">
                     <span class="material-symbols-outlined">${isFav ? 'favorite' : 'favorite_border'}</span>
+                </button>
+                <button class="ao-del-btn" title="${t('delete') || 'Delete'}">
+                    <span class="material-symbols-outlined">delete</span>
                 </button>
             </div>
             <div class="ao-card-info">
@@ -325,6 +402,33 @@ function renderAllOutfitCard(outfit) {
     `;
 }
 
+function renderTrashCard(outfit) {
+    const daysText = outfit.daysRemaining !== undefined
+        ? `${outfit.daysRemaining} ${t('days_remaining') || 'ngày'}`
+        : '';
+
+    return `
+        <div class="ao-trash-card" data-id="${outfit.id}">
+            <div class="ao-card-image-wrap ao-trash-overlay">
+                <img src="${outfit.imageUrl}" alt="${escapeHtml(outfit.name)}" class="ao-card-img" loading="lazy"
+                     referrerpolicy="no-referrer" crossorigin="anonymous">
+                ${daysText ? `<div class="ao-trash-days-badge"><span class="material-symbols-outlined" style="font-size:12px">schedule</span> ${daysText}</div>` : ''}
+            </div>
+            <div class="ao-card-info">
+                <h4 class="ao-card-name">${escapeHtml(outfit.name)}</h4>
+                <div class="ao-trash-actions">
+                    <button class="ao-restore-btn" title="${t('restore') || 'Khôi phục'}">
+                        <span class="material-symbols-outlined">restore</span>
+                        <span>${t('restore') || 'Khôi phục'}</span>
+                    </button>
+                    <button class="ao-perm-del-btn" title="${t('delete_forever') || 'Xoá hẳn'}">
+                        <span class="material-symbols-outlined">delete_forever</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
 function generateStyleTags(outfit) {
     // Generate descriptive style tags based on outfit data
     const tags = [];
@@ -430,7 +534,6 @@ function handleAllOutfitsCompare() {
                 name: outfit.name,
                 imageUrl: outfit.imageUrl,
                 timestamp: outfit.timestamp,
-                matchPercentage: outfit.matchPercentage,
             });
         }
     });
@@ -467,7 +570,6 @@ function handleAllOutfitsLookbook() {
                 name: outfit.name,
                 imageUrl: outfit.imageUrl,
                 timestamp: outfit.timestamp,
-                matchPercentage: outfit.matchPercentage,
             });
         }
     });
@@ -476,6 +578,82 @@ function handleAllOutfitsLookbook() {
 
     closeAllOutfits();
     if (window.openShareLookbook) openShareLookbook();
+}
+
+// ==========================================
+// DELETE OUTFIT
+// ==========================================
+
+async function deleteOutfit(id) {
+    // Soft-delete — chuyển vào thùng rác
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: 'DELETE_OUTFIT',
+            data: { id }
+        });
+
+        if (response?.success) {
+            allOutfitsData = allOutfitsData.filter(o => o.id !== id);
+            allOutfitsSelectedIds = allOutfitsSelectedIds.filter(sid => sid !== id);
+
+            if (state.results) {
+                state.results = state.results.filter(r => String(r.id) !== id);
+            }
+
+            renderAllOutfitsGrid();
+            updateAllOutfitsBottomBar();
+            showToast(t('all_outfits.moved_to_trash') || 'Đã chuyển vào thùng rác', 'success');
+        } else {
+            throw new Error(response?.error || 'Unknown error');
+        }
+    } catch (err) {
+        console.error('[AllOutfits] Soft-delete failed:', err);
+        showToast(t('all_outfits.delete_error') || 'Không thể xoá outfit', 'error');
+    }
+}
+
+async function restoreOutfit(id) {
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: 'RESTORE_OUTFIT',
+            data: { id }
+        });
+
+        if (response?.success) {
+            allOutfitsDeletedData = allOutfitsDeletedData.filter(o => o.id !== id);
+            renderAllOutfitsGrid();
+            showToast(t('all_outfits.restored') || 'Đã khôi phục outfit', 'success');
+        } else {
+            throw new Error(response?.error || 'Unknown error');
+        }
+    } catch (err) {
+        console.error('[AllOutfits] Restore failed:', err);
+        showToast(t('all_outfits.restore_error') || 'Không thể khôi phục', 'error');
+    }
+}
+
+async function permanentDeleteOutfit(id) {
+    const confirmMsg = t('all_outfits.permanent_delete_confirm') || 'Xoá vĩnh viễn outfit này?';
+    const confirmDetail = t('all_outfits.permanent_delete_msg') || 'Hành động này không thể hoàn tác.';
+    if (!window.confirm(`${confirmMsg}\n${confirmDetail}`)) return;
+
+    try {
+        const response = await chrome.runtime.sendMessage({
+            type: 'PERMANENT_DELETE_OUTFIT',
+            data: { id }
+        });
+
+        if (response?.success) {
+            allOutfitsDeletedData = allOutfitsDeletedData.filter(o => o.id !== id);
+            renderAllOutfitsGrid();
+            showToast(t('all_outfits.permanently_deleted') || 'Đã xoá vĩnh viễn', 'success');
+        } else {
+            throw new Error(response?.error || 'Unknown error');
+        }
+    } catch (err) {
+        console.error('[AllOutfits] Permanent delete failed:', err);
+        showToast(t('all_outfits.delete_error') || 'Không thể xoá', 'error');
+    }
 }
 
 // ==========================================
@@ -527,3 +705,6 @@ window.switchAllOutfitsTab = switchAllOutfitsTab;
 window.toggleAllOutfitsSearch = toggleAllOutfitsSearch;
 window.handleAllOutfitsCompare = handleAllOutfitsCompare;
 window.handleAllOutfitsLookbook = handleAllOutfitsLookbook;
+window.deleteOutfit = deleteOutfit;
+window.restoreOutfit = restoreOutfit;
+window.permanentDeleteOutfit = permanentDeleteOutfit;

@@ -101,34 +101,88 @@ function closeWardrobe() {
 
 /**
  * Render Quick Wardrobe Carousel below the inline result
+ * Hiển thị TẤT CẢ items từ state.recentClothing (cả wardrobe DB lẫn local)
  */
 function renderQuickWardrobeCarousel() {
     const carouselContainer = document.getElementById('quick-wardrobe-carousel');
     if (!carouselContainer) return;
 
-    // Load up to top 10 recent clothing items
-    const displayItems = state.recentClothing.slice(0, 10);
+    // STEP 1: Filter ALL items, only exclude hidden ones
+    const visibleItems = state.recentClothing.filter(item => {
+        const itemKey = item.id || item.imageUrl;
+        const isHidden = typeof hiddenClothingIds !== 'undefined'
+            ? hiddenClothingIds.has(itemKey)
+            : false;
+        return !isHidden;
+    });
+
+    // STEP 2: Show up to 20 most recent items
+    const displayItems = visibleItems.slice(0, 20);
 
     if (displayItems.length === 0) {
-        // If empty, hide or show placeholder
-        carouselContainer.innerHTML = `<span style="font-size: 11px; color: var(--color-foreground-muted); padding: 8px;">${t('empty_wardrobe', { default: 'Chưa có đồ nào trong tủ' })}</span>`;
+        carouselContainer.innerHTML = `<span style="font-size: 11px; color: var(--color-foreground-muted); padding: 8px;">${t('item_history_empty', { default: 'Chưa có item nào' })}</span>`;
         return;
     }
 
+    // STEP 3: Render each item with delete button + optional save button
     carouselContainer.innerHTML = displayItems.map(item => {
         const isSelected = state.selectedItems.some(i => i.imageUrl === item.imageUrl);
+        const itemKey = item.id || item.imageUrl;
+        const isSaved = item.saved === true;
         return `
-            <div class="quick-carousel-item ${isSelected ? 'selected' : ''}" style="flex: 0 0 60px; height: 80px; border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; border: 2px solid ${isSelected ? 'var(--color-primary)' : 'transparent'};">
-                <img src="${item.imageUrl}" alt="Wardrobe Item" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
+            <div class="quick-carousel-item ${isSelected ? 'selected' : ''}" data-item-key="${itemKey}" data-url="${item.imageUrl}" data-source-url="${item.sourceUrl || ''}" data-saved="${isSaved}" style="flex: 0 0 60px; height: 80px; border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; border: 2px solid ${isSelected ? 'var(--color-primary)' : 'transparent'};">
+                <img src="${item.imageUrl}" alt="${item.name || 'Item'}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
+                ${!isSaved ? `<button class="quick-carousel-save-btn" data-url="${item.imageUrl}" title="${t('clothing_history.save_to_collection', { default: 'Lưu vào tủ đồ' })}" style="position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.55); border: none; color: #ff6b6b; font-size: 11px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; opacity: 0; transition: opacity 0.15s ease;">♥</button>` : ''}
+                <button class="quick-carousel-delete-btn" data-item-key="${itemKey}" data-url="${item.imageUrl}" title="${t('delete', { default: 'Xoá' })}" style="position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.55); border: none; color: white; font-size: 11px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; z-index: 2; opacity: 0; transition: opacity 0.15s ease;">
+                    <span class="material-symbols-outlined" style="font-size: 13px;">close</span>
+                </button>
             </div>
         `;
     }).join('');
 
-    // Attach click listeners to quickly select clothing right from the carousel
+    // STEP 4: Attach click listeners — select, delete, or save
     carouselContainer.querySelectorAll('.quick-carousel-item').forEach((itemEl, idx) => {
-        itemEl.addEventListener('click', (e) => {
+        const deleteBtn = itemEl.querySelector('.quick-carousel-delete-btn');
+        const saveBtn = itemEl.querySelector('.quick-carousel-save-btn');
+
+        // Show/hide action buttons on hover
+        itemEl.addEventListener('mouseenter', () => {
+            if (deleteBtn) deleteBtn.style.opacity = '1';
+            if (saveBtn) saveBtn.style.opacity = '1';
+        });
+        itemEl.addEventListener('mouseleave', () => {
+            if (deleteBtn) deleteBtn.style.opacity = '0';
+            if (saveBtn) saveBtn.style.opacity = '0';
+        });
+
+        // Delete button — permanently remove item
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const key = deleteBtn.dataset.itemKey;
+                const url = deleteBtn.dataset.url;
+                if (window.deleteClothingFromHistory) {
+                    await deleteClothingFromHistory(key, url);
+                }
+                renderQuickWardrobeCarousel();
+            });
+        }
+
+        // Save button — add item to wardrobe
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const url = saveBtn.dataset.url;
+                if (window.saveClothingToWardrobe) {
+                    await saveClothingToWardrobe(url);
+                }
+                renderQuickWardrobeCarousel();
+            });
+        }
+
+        // Click item — select for try-on
+        itemEl.addEventListener('click', () => {
             const item = displayItems[idx];
-            // Setup selected items directly and update UI
             state.clothingImage = item.imageUrl;
             state.clothingSourceUrl = item.sourceUrl || null;
             state.selectedItems = [{
@@ -140,7 +194,7 @@ function renderQuickWardrobeCarousel() {
             }];
             updateUI();
 
-            // Highlight the selected item immediately in the carousel
+            // Highlight selected
             carouselContainer.querySelectorAll('.quick-carousel-item').forEach(el => {
                 el.style.border = '2px solid transparent';
                 el.classList.remove('selected');
@@ -148,7 +202,6 @@ function renderQuickWardrobeCarousel() {
             itemEl.style.border = '2px solid var(--color-primary)';
             itemEl.classList.add('selected');
 
-            // Prepare for quick try-on if model available
             if (state.modelImage && state.gemsBalance >= (window.GEM_COST_STANDARD || 1)) {
                 showToast(t('press_t_to_try') || 'Nhấn T hoặc nút Thử đồ để xem kết quả', 'info');
             }
@@ -291,15 +344,51 @@ async function deleteClothingFromWardrobe(id, url) {
         confirmText: t('delete') || 'Xóa',
         cancelText: t('close') || 'Hủy',
     });
-    if (confirmed) {
-        // deleteClothingFromHistory đã gọi loadRecentClothing + updateUI
-        await deleteClothingFromHistory(id, url);
-        // Cập nhật wardrobe grid + carousel + count
-        renderWardrobeGrid();
-        renderQuickWardrobeCarousel();
-        const countEl = document.getElementById('wardrobe-total-count');
-        if (countEl) countEl.textContent = t('wardrobe_item_count', { count: state.recentClothing.length });
+    if (!confirmed) return;
+
+    // STEP 1: Xoá từ Supabase DB nếu item có UUID id (không phải local-only)
+    if (id && !id.startsWith('clothing-') && !id.startsWith('wardrobe-')) {
+        const delRes = await chrome.runtime.sendMessage({
+            type: 'DELETE_WARDROBE_ITEM',
+            data: { itemId: id }
+        });
+        if (!delRes?.success) {
+            showToast(t('photo_delete_error') || 'Không thể xoá item. Vui lòng thử lại.', 'error');
+            return;
+        }
     }
+
+    // STEP 2: Xoá từ local storage (recent_clothing + demo_wardrobe)
+    await chrome.runtime.sendMessage({
+        type: 'DELETE_RECENT_CLOTHING',
+        data: { clothingId: id, imageUrl: url }
+    });
+
+    // STEP 3: Bỏ chọn nếu item đang được selected
+    const selectedIdx = state.selectedItems.findIndex(i => i.imageUrl === url);
+    if (selectedIdx > -1) {
+        state.selectedItems.splice(selectedIdx, 1);
+        saveSelectedItems();
+    }
+    if (state.clothingImage === url) {
+        // Chuyển sang item khác hoặc clear
+        if (state.selectedItems.length > 0) {
+            state.clothingImage = state.selectedItems[0].imageUrl;
+            state.clothingSourceUrl = state.selectedItems[0].sourceUrl;
+        } else {
+            state.clothingImage = null;
+            state.clothingSourceUrl = null;
+        }
+    }
+
+    // STEP 4: Reload & re-render
+    await loadRecentClothing();
+    updateUI();
+    showToast(t('result_deleted') || 'Đã xoá', 'success');
+    renderWardrobeGrid();
+    renderQuickWardrobeCarousel();
+    const countEl = document.getElementById('wardrobe-total-count');
+    if (countEl) countEl.textContent = t('wardrobe_item_count', { count: state.recentClothing.length });
 }
 
 // Expose ra window

@@ -132,17 +132,18 @@ function openOutfitPicker(slotIndex) {
 
     // STEP 2: Render picker grid
     grid.innerHTML = availableResults.map(result => {
-        const isCurrentSlot = lookbookSlots[slotIndex]?.id === result.id;
-        const isOtherSlot = lookbookSlots.some((s, i) => i !== slotIndex && s.id === result.id);
+        const resultIdStr = String(result.id);
+        const isCurrentSlot = lookbookSlots[slotIndex] && String(lookbookSlots[slotIndex].id) === resultIdStr;
+        const isOtherSlot = lookbookSlots.some((s, i) => i !== slotIndex && String(s.id) === resultIdStr);
         const displayName = result.name || t('result_number', { index: result.id }) || `#${result.id}`;
 
         return `
             <div class="lookbook-picker-item ${isCurrentSlot ? 'selected' : ''} ${isOtherSlot ? 'used-in-other' : ''}" 
-                 data-result-id="${result.id}" title="${displayName}">
+                 data-result-id="${resultIdStr}" title="${displayName}">
                 <img src="${result.imageUrl}" alt="${displayName}" loading="lazy"
                      onerror="if(window.fixBrokenImage) fixBrokenImage(this)">
                 ${isCurrentSlot ? '<div class="picker-badge current">✓</div>' : ''}
-                ${isOtherSlot ? '<div class="picker-badge other">' + String.fromCharCode(65 + lookbookSlots.findIndex((s, i) => i !== slotIndex && s.id === result.id)) + '</div>' : ''}
+                ${isOtherSlot ? '<div class="picker-badge other">' + String.fromCharCode(65 + lookbookSlots.findIndex((s, i) => i !== slotIndex && String(s.id) === resultIdStr)) + '</div>' : ''}
             </div>
         `;
     }).join('');
@@ -150,8 +151,8 @@ function openOutfitPicker(slotIndex) {
     // STEP 3: Bind click events
     grid.querySelectorAll('.lookbook-picker-item').forEach(item => {
         item.addEventListener('click', () => {
-            const resultId = parseInt(item.dataset.resultId);
-            const result = state.results.find(r => r.id === resultId);
+            const resultIdStr = item.dataset.resultId;
+            const result = state.results.find(r => String(r.id) === resultIdStr);
             if (result) {
                 selectOutfitForSlot(activePickerSlot, result);
             }
@@ -541,4 +542,6 @@ setupShareLookbookEvents();
 // ==========================================
 window.openShareLookbook = openShareLookbook;
 window.closeShareLookbook = closeShareLookbook;
+window.closeOutfitPicker = closeOutfitPicker;
+window.openOutfitPicker = openOutfitPicker;
 window.downloadLookbookCard = downloadLookbookAsImage; // Override legacy

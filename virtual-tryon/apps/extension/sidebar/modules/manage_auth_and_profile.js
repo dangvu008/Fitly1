@@ -77,6 +77,17 @@ async function checkAuthState() {
                 if (typeof window.loadRecentClothing === 'function') {
                     window.loadRecentClothing().catch(() => { });
                 }
+                // Reload outfit list — au auth vừa done, GET_OUTFITS có token
+                if (typeof window.renderCreatedOutfitsList === 'function') {
+                    window.renderCreatedOutfitsList();
+                }
+                // Reload state.results từ Supabase sau login để đảm bảo
+                // loadAllOutfitsData() có đủ data khi merge cloud + local.
+                // Thiếu call này → state.results rỗng sau logout → outfit
+                // hiển thị không đồng nhất mỗi lần đăng nhập lại.
+                if (typeof window.loadResults === 'function') {
+                    window.loadResults().catch(() => { });
+                }
             }
         } else {
             // Guest mode đã bị tắt → luôn yêu cầu đăng nhập
@@ -171,11 +182,13 @@ function updateUI() {
 
     // Clothing image (legacy)
     if (elements.clothingImage && elements.clothingPlaceholder && elements.clothingImageContainer) {
+        const clearBtn = document.getElementById('clear-clothing-selection-btn');
         if (state.clothingImage) {
             elements.clothingImage.src = state.clothingImage;
             elements.clothingImage.setAttribute('referrerpolicy', 'no-referrer');
             elements.clothingImage.classList.remove('hidden');
             elements.clothingPlaceholder.classList.add('hidden');
+            if (clearBtn) clearBtn.classList.remove('hidden');
             // Error handler cho ảnh clothing
             if (!elements.clothingImage.dataset.errorBound) {
                 elements.clothingImage.dataset.errorBound = 'true';
@@ -186,6 +199,7 @@ function updateUI() {
         } else {
             elements.clothingImage.classList.add('hidden');
             elements.clothingPlaceholder.classList.remove('hidden');
+            if (clearBtn) clearBtn.classList.add('hidden');
         }
     }
 

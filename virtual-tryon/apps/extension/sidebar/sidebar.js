@@ -78,6 +78,10 @@ async function init() {
         }, { once: true });
     });
 
+    // Render danh sách outfits đã tạo — SAU khi auth đã done
+    // để GET_OUTFITS có auth token và fetch từ Supabase thay vì fallback local
+    renderCreatedOutfitsList();
+
     console.log('[Fitly] Sidebar initialized successfully with modular architecture');
 }
 
@@ -93,6 +97,3 @@ loadLanguagePreference();
 
 // Khởi tạo profile menu events
 initProfileMenuEvents();
-
-// Render danh sách outfits đã tạo
-renderCreatedOutfitsList();

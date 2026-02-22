@@ -192,7 +192,7 @@ async function processTryOn(event) {
             }
 
             const firstClothingUrl = state.selectedItems?.[0]?.imageUrl || state.clothingImage;
-            addResult(response.result_image_url, firstClothingUrl, state.modelImage);
+            addResult(response.result_image_url, firstClothingUrl, state.modelImage, null, response.tryon_id || null);
             state.gemsBalance -= response.gems_used || GEM_COST_STANDARD;
             await loadUserModels();
             await loadRecentClothing();
