@@ -347,14 +347,19 @@ async function deleteClothingFromWardrobe(id, url) {
     if (!confirmed) return;
 
     // STEP 1: Xoá từ Supabase DB nếu item có UUID id (không phải local-only)
-    if (id && !id.startsWith('clothing-') && !id.startsWith('wardrobe-')) {
-        const delRes = await chrome.runtime.sendMessage({
-            type: 'DELETE_WARDROBE_ITEM',
-            data: { itemId: id }
-        });
-        if (!delRes?.success) {
-            showToast(t('photo_delete_error') || 'Không thể xoá item. Vui lòng thử lại.', 'error');
-            return;
+    // Guard: id phải tồn tại, không rỗng, không phải "undefined" (string), và không phải local prefix
+    if (id && id !== 'undefined' && !id.startsWith('clothing-') && !id.startsWith('wardrobe-')) {
+        try {
+            const delRes = await chrome.runtime.sendMessage({
+                type: 'DELETE_WARDROBE_ITEM',
+                data: { itemId: id }
+            });
+            if (!delRes?.success) {
+                // Warn nhưng KHÔNG return — vẫn tiếp tục xoá local để item biến mất khỏi UI
+                console.warn('[Fitly] DB delete failed for wardrobe item:', id, delRes?.error);
+            }
+        } catch (dbErr) {
+            console.warn('[Fitly] DB delete exception:', dbErr.message);
         }
     }
 
