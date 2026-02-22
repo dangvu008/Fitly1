@@ -147,6 +147,12 @@ function updateUI() {
     });
     if (elements.modelImage && elements.modelPlaceholder && elements.modelImageContainer) {
         if (state.modelImage) {
+            // Reset CORS-fix flags khi src thay đổi (cùng pattern với clothing image)
+            const modelSrcChanged = elements.modelImage.src !== state.modelImage;
+            if (modelSrcChanged) {
+                delete elements.modelImage.dataset.errorBound;
+                delete elements.modelImage.dataset.fixed;
+            }
             elements.modelImage.src = state.modelImage;
             elements.modelImage.setAttribute('referrerpolicy', 'no-referrer');
             elements.modelImage.classList.remove('hidden');
@@ -154,7 +160,7 @@ function updateUI() {
             elements.modelImageContainer.classList.add('has-image');
             renderMainImageActions();
             console.log('[UpdateUI] ✅ Model image rendered. src length =', state.modelImage.length);
-            // Error handler cho ảnh model
+            // Error handler cho ảnh model — re-attach khi src thay đổi
             if (!elements.modelImage.dataset.errorBound) {
                 elements.modelImage.dataset.errorBound = 'true';
                 elements.modelImage.addEventListener('error', function () {
@@ -184,12 +190,19 @@ function updateUI() {
     if (elements.clothingImage && elements.clothingPlaceholder && elements.clothingImageContainer) {
         const clearBtn = document.getElementById('clear-clothing-selection-btn');
         if (state.clothingImage) {
+            // Reset CORS-fix flags khi src thay đổi để error handler có thể fire lại
+            // Bug cũ: errorBound + { once: true } khiến ảnh mới fail CORS nhưng không có handler
+            const srcChanged = elements.clothingImage.src !== state.clothingImage;
+            if (srcChanged) {
+                delete elements.clothingImage.dataset.errorBound;
+                delete elements.clothingImage.dataset.fixed;
+            }
             elements.clothingImage.src = state.clothingImage;
             elements.clothingImage.setAttribute('referrerpolicy', 'no-referrer');
             elements.clothingImage.classList.remove('hidden');
             elements.clothingPlaceholder.classList.add('hidden');
             if (clearBtn) clearBtn.classList.remove('hidden');
-            // Error handler cho ảnh clothing
+            // Error handler cho ảnh clothing — re-attach mỗi khi src thay đổi
             if (!elements.clothingImage.dataset.errorBound) {
                 elements.clothingImage.dataset.errorBound = 'true';
                 elements.clothingImage.addEventListener('error', function () {
