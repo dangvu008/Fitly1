@@ -375,6 +375,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const replicateApiKey = Deno.env.get('REPLICATE_API_KEY')
 
     if (!replicateApiKey) {
@@ -384,12 +385,17 @@ serve(async (req) => {
       })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    // userClient: authenticated with user JWT — for auth check, rate limit, gems
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     })
 
+    // serviceClient: authenticated with service_role key — for post-AI operations
+    // (storage upload, save history) that may happen after user JWT expires
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey)
+
     console.log('[process-tryon] 🔑 Calling supabase.auth.getUser()...')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(tokenPart)
+    const { data: { user }, error: authError } = await userClient.auth.getUser(tokenPart)
     if (authError || !user) {
       console.error('[process-tryon] ❌ Auth failed:', authError?.message, '| user:', user)
       return new Response(JSON.stringify({
@@ -406,7 +412,7 @@ serve(async (req) => {
     // 2. Rate limit (Database-backed for scalability)
     // Check request count in the last 60 seconds
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
-    const { count: requestCount, error: countError } = await supabase
+    const { count: requestCount, error: countError } = await userClient
       .from('tryon_history')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
@@ -414,9 +420,6 @@ serve(async (req) => {
 
     if (countError) {
       console.error('[process-tryon] Rate limit check error:', countError)
-      // Fail open (allow request) or fail closed? Fail closed for safety.
-      // But for better UX, let's log and proceed if DB error, unless critical.
-      // Here we choose to proceed but log heavily.
     } else if (requestCount !== null && requestCount >= 5) {
       return new Response(JSON.stringify({
         error: 'RATE_LIMIT_EXCEEDED',
@@ -457,7 +460,7 @@ serve(async (req) => {
     }
 
     // 4. Load ai_config
-    const { data: aiConfig } = await supabase
+    const { data: aiConfig } = await userClient
       .from('ai_config')
       .select('system_prompt, cost_standard, cost_hd')
       .eq('id', 'default')
@@ -470,7 +473,7 @@ serve(async (req) => {
       : (quality === 'hd' ? (aiConfig?.cost_hd || 2) : (aiConfig?.cost_standard || 1))
 
     // 5. Check gems balance
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await userClient
       .from('profiles')
       .select('gems_balance')
       .eq('id', userId)
@@ -497,7 +500,7 @@ serve(async (req) => {
       const clothingDataList = clothing_images.map((c: { image: string }) => c.image)
       cacheKey = await generateCacheKey(model_image, clothingDataList, quality)
 
-      const { data: cachedResult } = await supabase
+      const { data: cachedResult } = await userClient
         .from('tryon_history')
         .select('id, result_image_url')
         .eq('cache_key', cacheKey)
@@ -520,7 +523,7 @@ serve(async (req) => {
     }
 
     // 7. Deduct gems atomically
-    const { data: newBalance, error: deductError } = await supabase.rpc('deduct_gems_atomic', {
+    const { data: newBalance, error: deductError } = await userClient.rpc('deduct_gems_atomic', {
       p_user_id: userId,
       p_amount: gemsRequired,
       p_tryon_id: null,
@@ -544,7 +547,7 @@ serve(async (req) => {
       if (model_image.startsWith('http')) {
         modelImageUrl = model_image
       } else {
-        modelImageUrl = await uploadBase64ToStorage(supabase, userId, model_image, 'temp-inputs', 'image/jpeg')
+        modelImageUrl = await uploadBase64ToStorage(userClient, userId, model_image, 'temp-inputs', 'image/jpeg')
       }
 
       if (edit_mode) {
@@ -593,7 +596,7 @@ CRITICAL CONSTRAINTS — MUST FOLLOW:
         clothingImageUrls = await Promise.all(
           sortedClothing.map(async (item: { image: string }, i: number) => {
             if (item.image.startsWith('http')) return item.image
-            return uploadBase64ToStorage(supabase, userId, item.image, 'temp-inputs', 'image/jpeg')
+            return uploadBase64ToStorage(userClient, userId, item.image, 'temp-inputs', 'image/jpeg')
           })
         )
 
@@ -607,7 +610,7 @@ CRITICAL CONSTRAINTS — MUST FOLLOW:
       }
     } catch (uploadError) {
       // Refund gems nếu upload thất bại
-      await supabase.rpc('refund_gems_atomic', { p_user_id: userId, p_amount: gemsRequired, p_tryon_id: null })
+      await userClient.rpc('refund_gems_atomic', { p_user_id: userId, p_amount: gemsRequired, p_tryon_id: null })
       console.error('[process-tryon] Upload error:', uploadError)
       return new Response(JSON.stringify({
         error: 'UPLOAD_FAILED',
@@ -639,7 +642,7 @@ CRITICAL CONSTRAINTS — MUST FOLLOW:
       }
     } catch (replicateError) {
       // Refund gems khi Replicate thất bại
-      await supabase.rpc('refund_gems_atomic', { p_user_id: userId, p_amount: gemsRequired, p_tryon_id: null })
+      await serviceClient.rpc('refund_gems_atomic', { p_user_id: userId, p_amount: gemsRequired, p_tryon_id: null })
       console.error('[process-tryon] Replicate error:', replicateError)
 
       let errorMsg = 'AI xử lý thất bại. Gems đã được hoàn lại. Vui lòng thử lại.'
@@ -657,19 +660,19 @@ CRITICAL CONSTRAINTS — MUST FOLLOW:
     // 11. Extract result URL
     const resultImageUrl_replicate = extractResultUrl(prediction.output)
 
-    // 12. Lưu result vào Storage của mình (để control truy cập lâu dài)
+    // 12. Lưu result vào Storage (dùng serviceClient — không bị JWT expired)
     let resultImageUrl: string
     try {
-      resultImageUrl = await uploadUrlToStorage(supabase, userId, resultImageUrl_replicate, 'results')
+      resultImageUrl = await uploadUrlToStorage(serviceClient, userId, resultImageUrl_replicate, 'results')
     } catch (storageError) {
       console.error('[process-tryon] Storage save error:', storageError)
       // Fallback: dùng URL từ Replicate (có thể expire)
       resultImageUrl = resultImageUrl_replicate
     }
 
-    // 13. Save tryon_history record
+    // 13. Save tryon_history record (dùng serviceClient — không bị JWT expired)
     const processingTime = Date.now() - startTime
-    const { data: tryonRecord } = await supabase
+    const { data: tryonRecord } = await serviceClient
       .from('tryon_history')
       .insert({
         user_id: userId,

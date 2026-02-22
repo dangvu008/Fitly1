@@ -113,9 +113,16 @@ export async function handleProcessTryOn(data) {
     }
 
     // STEP 1: SW keep-alive — prevent Chrome from killing SW during long processing
+    // 15s interval with dual-API ping for maximum reliability
+    let keepAliveTick = 0;
     const keepAliveInterval = setInterval(() => {
+        keepAliveTick++;
         chrome.runtime.getPlatformInfo().catch(() => { });
-    }, 20000);
+        // Alternate with getManifest() every other tick as fallback
+        if (keepAliveTick % 2 === 0) {
+            try { chrome.runtime.getManifest(); } catch (_) { }
+        }
+    }, 15000);
 
     // STEP 1b: Pause proactive refresh alarm during try-on processing
     // Prevents TOKEN_REFRESH_FAILED from triggering false-positive logout on sidebar

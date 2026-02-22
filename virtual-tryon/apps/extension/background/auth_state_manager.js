@@ -238,26 +238,29 @@ async function _doRefresh(refreshToken) {
  * token has maximum remaining lifetime (~1 hour).
  * Returns fresh access_token or throws error if refresh impossible.
  * 
- * TTL Check: If current token TTL > 300s (5 minutes), returns current token without refresh.
+ * TTL Check: If current token TTL > 900s (15 minutes), returns current token without refresh.
+ * Rationale: Edge Function takes 3-5 minutes, plus network latency. 15-min threshold
+ * ensures token won't expire mid-processing even in worst case.
  * Error Handling: Throws error with errorCode = 'REFRESH_FAILED' if all refresh attempts fail.
  */
 export async function forceRefreshToken() {
     console.log('[forceRefreshToken] 🔄 START');
-    
+
     // STEP 1: Get current token and check TTL
     const data = await chrome.storage.local.get(['refresh_token', 'auth_token', 'expires_at']);
     const ttl = data.expires_at ? Math.floor((data.expires_at - Date.now()) / 1000) : null;
     console.log('[forceRefreshToken] Current token TTL:', ttl, 's, has refresh_token:', !!data.refresh_token);
-    
-    // STEP 2: TTL Check - If token has >= 5 minutes remaining, no need to refresh
-    if (ttl !== null && ttl >= 300) {
-        console.log('[forceRefreshToken] ✅ Token TTL >= 300s, using current token (no refresh needed)');
+
+    // STEP 2: TTL Check - If token has >= 15 minutes remaining, no need to refresh
+    // Edge Function takes 3-5 min → need sufficient margin to prevent mid-processing expiry
+    if (ttl !== null && ttl >= 900) {
+        console.log('[forceRefreshToken] ✅ Token TTL >= 900s (' + ttl + 's), using current token (no refresh needed)');
         if (data.auth_token) {
             return data.auth_token;
         }
     }
-    
-    console.log('[forceRefreshToken] Token TTL <= 300s or expired, proceeding with refresh...');
+
+    console.log('[forceRefreshToken] Token TTL < 900s (' + ttl + 's) or expired, proceeding with refresh...');
 
     // STEP 3: Try refresh with legacy refresh_token
     if (data.refresh_token) {

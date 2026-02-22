@@ -21,7 +21,7 @@ import { forceRefreshToken } from '../background/auth_state_manager.js'
 
 const SUPABASE_URL = supabase.supabaseUrl
 const EDGE_FUNCTION_TIMEOUT = 180000 // 180 seconds
-const TOKEN_REFRESH_THRESHOLD = 300 // 5 minutes in seconds
+const TOKEN_REFRESH_THRESHOLD = 900 // 15 minutes in seconds (match forceRefreshToken threshold)
 
 // Mutex để tránh concurrent refresh calls
 let _edgeFunctionRefreshPromise = null
@@ -43,7 +43,7 @@ async function getAuthHeader() {
 async function getTokenTTL() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.expires_at) return null
-    
+
     const expiresAtMs = session.expires_at * 1000
     const ttlSeconds = Math.floor((expiresAtMs - Date.now()) / 1000)
     return ttlSeconds
@@ -57,10 +57,10 @@ async function ensureFreshToken() {
     // STEP 1: Check token TTL
     const ttl = await getTokenTTL()
     console.log('[callEdgeFunction] Current token TTL:', ttl, 'seconds')
-    
+
     if (ttl === null || ttl < TOKEN_REFRESH_THRESHOLD) {
         console.log('[callEdgeFunction] Token TTL < 5 minutes, refreshing...')
-        
+
         // STEP 2: Mutex pattern - nếu đã có refresh in-flight, chờ nó
         if (_edgeFunctionRefreshPromise) {
             console.log('[callEdgeFunction] Refresh already in progress, waiting...')
@@ -74,7 +74,7 @@ async function ensureFreshToken() {
                 throw error
             }
         }
-        
+
         // STEP 3: Acquire mutex - this is the only active refresh
         _edgeFunctionRefreshPromise = forceRefreshToken()
         try {
@@ -84,7 +84,7 @@ async function ensureFreshToken() {
                 error.errorCode = 'AUTH_EXPIRED'
                 throw error
             }
-            
+
             const newTTL = await getTokenTTL()
             console.log('[callEdgeFunction] ✅ Token refreshed successfully, new TTL:', newTTL, 'seconds')
         } finally {
@@ -113,7 +113,7 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
         wrappedError.errorCode = 'AUTH_EXPIRED'
         throw wrappedError
     }
-    
+
     // STEP 2: Prepare request
     const authHeader = await getAuthHeader()
     const headers = {
@@ -128,16 +128,16 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
     }
 
     const url = `${SUPABASE_URL}/functions/v1/${functionName}`
-    
+
     // STEP 3: Call Edge Function với timeout protection
     let response
     try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), EDGE_FUNCTION_TIMEOUT)
-        
+
         response = await fetch(url, { ...options, signal: controller.signal })
         clearTimeout(timeoutId)
-        
+
     } catch (error) {
         // Timeout error
         if (error.name === 'AbortError') {
@@ -146,7 +146,7 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
             timeoutError.errorCode = 'TIMEOUT'
             throw timeoutError
         }
-        
+
         // Network error
         console.error('[callEdgeFunction] Network error:', error)
         const networkError = new Error(error.message || 'Network error')
@@ -157,7 +157,7 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
     // STEP 4: Handle 401 với retry logic
     if (response.status === 401) {
         console.warn('[callEdgeFunction] Received 401, attempting token refresh and retry...')
-        
+
         try {
             // Force refresh token
             const freshToken = await forceRefreshToken()
@@ -166,9 +166,9 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
                 error.errorCode = 'AUTH_EXPIRED'
                 throw error
             }
-            
+
             console.log('[callEdgeFunction] Token refreshed, retrying request...')
-            
+
             // Retry request với fresh token
             const retryAuthHeader = await getAuthHeader()
             const retryHeaders = {
@@ -176,18 +176,18 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
                 'Content-Type': 'application/json',
                 'apikey': supabase.supabaseKey
             }
-            
+
             const retryOptions = { method, headers: retryHeaders }
             if (body && method !== 'GET') {
                 retryOptions.body = JSON.stringify(body)
             }
-            
+
             const retryController = new AbortController()
             const retryTimeoutId = setTimeout(() => retryController.abort(), EDGE_FUNCTION_TIMEOUT)
-            
+
             response = await fetch(url, { ...retryOptions, signal: retryController.signal })
             clearTimeout(retryTimeoutId)
-            
+
             // Nếu retry vẫn 401 → token thực sự hết hạn
             if (response.status === 401) {
                 console.error('[callEdgeFunction] Retry also returned 401, token expired')
@@ -195,22 +195,22 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
                 error.errorCode = 'AUTH_EXPIRED'
                 throw error
             }
-            
+
             console.log('[callEdgeFunction] ✅ Retry successful')
-            
+
         } catch (error) {
             // Retry failed
             if (error.errorCode === 'AUTH_EXPIRED') {
                 throw error
             }
-            
+
             // Timeout trong retry
             if (error.name === 'AbortError') {
                 const timeoutError = new Error(`Edge Function ${functionName} timeout on retry`)
                 timeoutError.errorCode = 'TIMEOUT'
                 throw timeoutError
             }
-            
+
             // Network error trong retry
             const networkError = new Error(error.message || 'Network error on retry')
             networkError.errorCode = 'NETWORK_ERROR'
@@ -222,7 +222,7 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
         const error = new Error(errorData.error || errorData.message || `Edge function ${functionName} failed`)
-        
+
         // Set errorCode based on status
         if (response.status >= 500) {
             error.errorCode = 'SERVER_ERROR'
@@ -231,7 +231,7 @@ async function callEdgeFunction(functionName, body = null, method = 'POST') {
         } else {
             error.errorCode = 'API_ERROR'
         }
-        
+
         throw error
     }
 
