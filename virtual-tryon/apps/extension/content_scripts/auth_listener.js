@@ -26,13 +26,13 @@
 
         // Handle auth state message (from ExtensionAuthBridge)
         if (message?.type === EXTENSION_AUTH_MESSAGE) {
-            console.log('[FitlyExt] Received auth state from web:', message.payload?.authenticated);
+            // console.log('[FitlyExt] Received auth state from web:', message.payload?.authenticated);
 
             chrome.runtime.sendMessage({
                 type: 'STORE_AUTH_TOKEN',
                 payload: message.payload
             }).then((response) => {
-                console.log('[FitlyExt] Auth token stored:', response?.success);
+                // console.log('[FitlyExt] Auth token stored:', response?.success);
             }).catch((error) => {
                 console.error('[FitlyExt] Failed to store auth token:', error);
             });
@@ -41,13 +41,13 @@
 
         // Handle auth success message (from popup login)
         if (message?.type === AUTH_SUCCESS_MESSAGE) {
-            console.log('[FitlyExt] Received auth success from popup');
+            // console.log('[FitlyExt] Received auth success from popup');
 
             chrome.runtime.sendMessage({
                 type: 'AUTH_SUCCESS',
                 session: message.session
             }).then((response) => {
-                console.log('[FitlyExt] Auth success processed:', response?.success);
+                // console.log('[FitlyExt] Auth success processed:', response?.success);
             }).catch((error) => {
                 console.error('[FitlyExt] Failed to process auth success:', error);
             });
@@ -59,5 +59,5 @@
     // Web app sẽ respond nếu đã logged in
     window.postMessage({ type: 'FITLY_REQUEST_AUTH' }, '*');
 
-    console.log('[FitlyExt] Auth listener initialized');
+    // console.log('[FitlyExt] Auth listener initialized');
 })();

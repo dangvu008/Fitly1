@@ -44,8 +44,14 @@
                 sendResponse({ success: true });
                 break;
 
+            /**
+             * GET_IMAGE_CONTEXT: Handled by the enhanced listener below (line ~1430)
+             * that uses lastRightClickedElement for better accuracy.
+             */
+
             default:
                 sendResponse({ success: false, error: 'Unknown message type' });
+
         }
         return true;
     });
@@ -75,7 +81,7 @@
 
         // Check if we found any images
         if (selectedImages.size === 0) {
-            showNotification('😔 Xin lỗi! Không tìm thấy ảnh quần áo phù hợp trên trang này', 'warning');
+            showNotification(window.t ? window.t('no_clothing_found') : '😔 Xin lỗi! Không tìm thấy ảnh quần áo phù hợp trên trang này', 'warning');
             showAlternativeOptions();
             disableImageSelection();
             return;
@@ -105,34 +111,34 @@
             <div class="vt-alt-content">
                 <div class="vt-alt-header">
                     <span class="vt-alt-icon">😔</span>
-                    <h3>Không thể lấy ảnh từ trang này</h3>
+                    <h3>${window.t ? window.t('cannot_get_image') : 'Không thể lấy ảnh từ trang này'}</h3>
                 </div>
-                <p>Một số trang web bảo vệ ảnh của họ. Đừng lo, bạn có thể thử các cách sau:</p>
+                <p>${window.t ? window.t('protected_image_help') : 'Một số trang web bảo vệ ảnh của họ. Đừng lo, bạn có thể thử các cách sau:'}</p>
                 <div class="vt-alt-options">
                     <button class="vt-alt-btn vt-alt-url" data-action="paste-url">
                         <span class="vt-alt-btn-icon">🔗</span>
                         <span class="vt-alt-btn-text">
-                            <strong>Dán URL ảnh</strong>
-                            <small>Chuột phải vào ảnh → Copy image address</small>
+                            <strong>${window.t ? window.t('paste_image_url') : 'Dán URL ảnh'}</strong>
+                            <small>${window.t ? window.t('copy_image_address') : 'Chuột phải vào ảnh → Copy image address'}</small>
                         </span>
                     </button>
                     <button class="vt-alt-btn vt-alt-upload" data-action="upload-image">
                         <span class="vt-alt-btn-icon">📤</span>
                         <span class="vt-alt-btn-text">
-                            <strong>Tải ảnh lên</strong>
-                            <small>Chọn ảnh từ máy tính của bạn</small>
+                            <strong>${window.t ? window.t('upload_image') : 'Tải ảnh lên'}</strong>
+                            <small>${window.t ? window.t('upload_image_sub') : 'Chọn ảnh từ máy tính của bạn'}</small>
                         </span>
                     </button>
                     <button class="vt-alt-btn vt-alt-screenshot" data-action="screenshot">
                         <span class="vt-alt-btn-icon">📸</span>
                         <span class="vt-alt-btn-text">
-                            <strong>Chụp màn hình</strong>
-                            <small>Chụp phần ảnh quần áo bạn muốn thử</small>
+                            <strong>${window.t ? window.t('screenshot') : 'Chụp màn hình'}</strong>
+                            <small>${window.t ? window.t('screenshot_sub') : 'Chụp phần ảnh quần áo bạn muốn thử'}</small>
                         </span>
                     </button>
                 </div>
                 <input type="file" id="vt-alt-file-input" accept="image/*" style="display: none;">
-                <button class="vt-alt-close">Đóng</button>
+                <button class="vt-alt-close">${window.t ? window.t('close') : 'Đóng'}</button>
             </div>
         `;
         document.body.appendChild(modal);
@@ -147,11 +153,11 @@
             const file = e.target.files[0];
             if (file) {
                 if (file.size > 10 * 1024 * 1024) {
-                    showNotification('Ảnh quá lớn (tối đa 10MB)', 'error');
+                    showNotification(window.t ? window.t('image_too_large') : 'Ảnh quá lớn (tối đa 10MB)', 'error');
                     return;
                 }
                 if (!file.type.startsWith('image/')) {
-                    showNotification('Vui lòng chọn file ảnh', 'error');
+                    showNotification(window.t ? window.t('select_image_file') : 'Vui lòng chọn file ảnh', 'error');
                     return;
                 }
 
@@ -162,7 +168,7 @@
                         imageUrl: event.target.result
                     });
                     modal.remove();
-                    showNotification('✅ Đã tải ảnh lên!', 'success');
+                    showNotification(window.t ? window.t('get_image_success') : '✅ Đã tải ảnh lên!', 'success');
                 };
                 reader.readAsDataURL(file);
             }
@@ -195,7 +201,7 @@
 
     // Prompt user for image URL
     function promptForImageUrl() {
-        const url = prompt('Dán URL ảnh quần áo vào đây:\n(Chuột phải vào ảnh → Copy image address)');
+        const url = prompt(window.t ? window.t('paste_url_prompt') : 'Dán URL ảnh quần áo vào đây:\n(Chuột phải vào ảnh → Copy image address)');
 
         if (url && url.trim()) {
             validateAndUseImageUrl(url.trim());
@@ -205,11 +211,11 @@
     // Validate image URL and send to sidebar
     async function validateAndUseImageUrl(url) {
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            showNotification('❌ URL không hợp lệ. Phải bắt đầu bằng http:// hoặc https://', 'error');
+            showNotification(window.t ? window.t('invalid_url_error') : '❌ URL không hợp lệ. Phải bắt đầu bằng http:// hoặc https://', 'error');
             return;
         }
 
-        showNotification('🔄 Đang kiểm tra ảnh...', 'info');
+        showNotification(window.t ? window.t('checking_image_info') : '🔄 Đang kiểm tra ảnh...', 'info');
 
         try {
             // Try to load the image
@@ -220,7 +226,7 @@
                     type: 'IMAGE_SELECTED',
                     imageUrl: url
                 });
-                showNotification('✅ Đã lấy ảnh thành công!', 'success');
+                showNotification(window.t ? window.t('get_image_success') : '✅ Đã lấy ảnh thành công!', 'success');
             } else {
                 showImageLoadError(url);
             }
@@ -267,20 +273,20 @@
             <div class="vt-error-content">
                 <div class="vt-error-header">
                     <span class="vt-error-icon">😅</span>
-                    <h3>Oops! Không thể tải ảnh này</h3>
+                    <h3>${window.t ? window.t('image_unavailable') : 'Oops! Không thể tải ảnh này'}</h3>
                 </div>
-                <p>Trang web này có thể đang chặn việc lấy ảnh trực tiếp. Điều này khá phổ biến với các trang thương mại điện tử.</p>
+                <p>${window.t ? window.t('image_protected') : 'Trang web này có thể đang chặn việc lấy ảnh trực tiếp. Điều này khá phổ biến với các trang thương mại điện tử.'}</p>
                 <div class="vt-error-suggestion">
-                    <strong>💡 Gợi ý:</strong>
+                    <strong>${window.t ? window.t('suggestion_label') : '💡 Gợi ý:'}</strong>
                     <ol>
-                        <li>Thử lưu ảnh về máy trước</li>
-                        <li>Sau đó tải lên trong Fitly sidebar</li>
+                        <li>${window.t ? window.t('suggest_save_first') : 'Thử lưu ảnh về máy trước'}</li>
+                        <li>${window.t ? window.t('suggest_upload_sidebar') : 'Sau đó tải lên trong Fitly sidebar'}</li>
                     </ol>
                 </div>
                 <div class="vt-error-actions">
-                    <button class="vt-error-btn vt-error-retry">Thử URL khác</button>
-                    <button class="vt-error-btn vt-error-use-anyway">Vẫn thử dùng URL này</button>
-                    <button class="vt-error-btn vt-error-close">Đóng</button>
+                    <button class="vt-error-btn vt-error-retry">${window.t ? window.t('retry_other_url') : 'Thử URL khác'}</button>
+                    <button class="vt-error-btn vt-error-use-anyway">${window.t ? window.t('use_anyway') : 'Vẫn thử dùng URL này'}</button>
+                    <button class="vt-error-btn vt-error-close">${window.t ? window.t('close') : 'Đóng'}</button>
                 </div>
             </div>
         `;
@@ -298,7 +304,7 @@
                 type: 'IMAGE_SELECTED',
                 imageUrl: url
             });
-            showNotification('Đã thêm ảnh. Nếu không hiển thị, hãy thử lưu ảnh về máy.', 'warning');
+            showNotification(window.t ? window.t('image_added_warning_local') : 'Đã thêm ảnh. Nếu không hiển thị, hãy thử lưu ảnh về máy.', 'warning');
         });
 
         modal.querySelector('.vt-error-close').addEventListener('click', () => {
@@ -393,28 +399,46 @@
     }
 
     function getImageUrl(element) {
+        let url = null;
         // Check for our stored URL (for background images)
-        if (element._vtImageUrl) return element._vtImageUrl;
+        if (element._vtImageUrl) url = element._vtImageUrl;
 
-        // Check srcset first for high-res images
-        const srcset = element.getAttribute('srcset');
-        if (srcset) {
-            const sources = srcset.split(',').map(s => s.trim().split(' '));
-            // Get the largest image
-            let largest = sources[sources.length - 1];
-            if (largest && largest[0]) {
-                return largest[0];
+        if (!url) {
+            // Check srcset first for high-res images
+            const srcset = element.getAttribute('srcset');
+            if (srcset) {
+                const sources = srcset.split(',').map(s => s.trim().split(/\s+/));
+                // Get the largest image
+                let largest = sources[sources.length - 1];
+                if (largest && largest[0]) {
+                    url = largest[0];
+                }
             }
         }
 
-        // Check data-src for lazy-loaded images
-        const dataSrc = element.getAttribute('data-src') ||
-            element.getAttribute('data-lazy-src') ||
-            element.getAttribute('data-original');
-        if (dataSrc) return dataSrc;
+        if (!url) {
+            // Check data-src for lazy-loaded images
+            const dataSrc = element.getAttribute('data-src') ||
+                element.getAttribute('data-lazy-src') ||
+                element.getAttribute('data-original');
+            if (dataSrc) url = dataSrc;
+        }
 
-        // Regular src
-        return element.src || element.currentSrc;
+        if (!url) {
+            // Regular src
+            url = element.src || element.currentSrc;
+        }
+
+        // Đảm bảo URL là absolute
+        if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+            try {
+                return new URL(url, window.location.href).href;
+            } catch (e) {
+                return url;
+            }
+        }
+
+        return url;
     }
 
     function handleImageClick(event) {
@@ -806,7 +830,7 @@
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
                 </button>
-                <button class="fitly-action-btn" data-action="share" title="Copy link" style="
+                <button class="fitly-action-btn" data-action="compare" title="So sánh outfit" style="
                     width: 38px;
                     height: 38px;
                     border: none;
@@ -820,8 +844,9 @@
                     transition: all 0.15s;
                 ">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
-                        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                        <rect x="2" y="3" width="8" height="18" rx="1"/>
+                        <rect x="14" y="3" width="8" height="18" rx="1"/>
+                        <line x1="12" y1="6" x2="12" y2="18" stroke-dasharray="2 2"/>
                     </svg>
                 </button>
                 <button class="fitly-action-btn" data-action="save" title="Lưu outfit" style="
@@ -1059,8 +1084,13 @@
                     await copyImageToClipboard(imageUrl);
                 } else if (action === 'download') {
                     downloadImage(imageUrl);
-                } else if (action === 'share') {
-                    shareImage(imageUrl);
+                } else if (action === 'compare') {
+                    // Gửi message tới sidebar để mở compare view
+                    chrome.runtime.sendMessage({
+                        type: 'OPEN_COMPARE_VIEW',
+                        data: data
+                    });
+                    showNotification('Mở so sánh outfit trong sidebar', 'success');
                 } else if (action === 'save') {
                     chrome.runtime.sendMessage({
                         type: 'SAVE_RESULT_OUTFIT',
@@ -1273,7 +1303,7 @@
 
             if (!fitly_active_popups || fitly_active_popups.length === 0) return;
 
-            console.log('[Fitly] Restoring', fitly_active_popups.length, 'popups');
+            // console.log('[Fitly] Restoring', fitly_active_popups.length, 'popups');
 
             // Restore each popup
             for (const state of fitly_active_popups) {
@@ -1312,11 +1342,23 @@
                 }
             }
 
-            console.log('[Fitly] Restored', activePopups.size, 'popups');
+            // Debug log for popup restore count (disabled in production)
+            // console.log('[Fitly] Restored', activePopups.size, 'popups');
         } catch (error) {
             console.warn('[Fitly] Could not restore popups:', error);
         }
     }
+
+    // ==========================================
+    // NATIVE CONTEXT MENU HELPER
+    // ==========================================
+
+    let lastRightClickedElement = null;
+
+    // Track the last right-clicked element to get context for native menu
+    document.addEventListener('contextmenu', (e) => {
+        lastRightClickedElement = e.target;
+    }, true);
 
     // ==========================================
     // INIT
@@ -1329,9 +1371,59 @@
             handlePopupMessages(message, sender, sendResponse);
             return true;
         }
+
+        // Handle native context menu context requests
+        if (message.type === 'GET_IMAGE_CONTEXT') {
+            let altText = '';
+            let productTitle = '';
+            let nearbyText = '';
+
+            try {
+                // If we didn't capture the element, do a crude DOM search by URL (fallback)
+                let target = lastRightClickedElement;
+                if (!target || (target.nodeName !== 'IMG' && getImageUrl(target) !== message.imageUrl)) {
+                    target = Array.from(document.querySelectorAll('img')).find(img => img.src === message.imageUrl) || lastRightClickedElement;
+                }
+
+                if (target) {
+                    altText = target.alt || target.title || '';
+
+                    const ancestors = [
+                        target.closest('a'),
+                        target.closest('[class*="product"]'),
+                        target.closest('[class*="item"]'),
+                        target.closest('figure'),
+                        target.closest('li'),
+                        target.closest('article'),
+                    ].filter(Boolean);
+
+                    for (const ancestor of ancestors) {
+                        const nameEl = ancestor.querySelector('h1,h2,h3,h4,[class*="name"],[class*="title"],[class*="product-name"]');
+                        if (nameEl?.textContent?.trim()) {
+                            productTitle = nameEl.textContent.trim().slice(0, 120);
+                            break;
+                        }
+                    }
+
+                    const parent = target.parentElement;
+                    if (parent) {
+                        nearbyText = parent.textContent?.trim().slice(0, 80) || '';
+                    }
+                }
+
+                if (!altText && !productTitle) {
+                    productTitle = document.title?.slice(0, 100) || '';
+                }
+            } catch (e) {
+                console.warn('[Fitly] Error getting image context:', e);
+            }
+
+            sendResponse({ altText, productTitle, nearbyText });
+            return true;
+        }
     });
 
-    console.log('[Fitly] Content script loaded with popup support');
+    // Content script initialized with popup support
 
     // Restore popups on page load
     restorePopups();

@@ -13,7 +13,7 @@ export interface GemPackage {
     name: string;
     gems: number;
     price_vnd: number;
-    stripe_price_id?: string;
+    gateway_price_id?: string;
     is_popular?: boolean;
 }
 

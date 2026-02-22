@@ -34,9 +34,9 @@ export const API_ENDPOINTS = {
     OUTFITS_SAVE: '/api/outfits/save',
     OUTFITS_DELETE: (id: string) => `/api/outfits/${id}`,
 
-    // Stripe
-    STRIPE_CHECKOUT: '/api/stripe/checkout',
-    STRIPE_WEBHOOK: '/api/stripe/webhook',
+    // Lemon Squeezy Payments
+    LEMON_CHECKOUT: '/api/lemon-squeezy/checkout',
+    LEMON_WEBHOOK: '/api/lemon-squeezy/webhook',
 } as const;
 
 // Common API error codes

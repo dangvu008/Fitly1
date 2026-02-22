@@ -2,230 +2,188 @@
 description: Plan and implement UI
 ---
 
+---
+description: Plan and implement professional UI/UX. Searches design database for colors, typography, patterns. Always checks existing components before creating new ones.
+---
+
 # UI/UX Pro Max - Design Intelligence
 
-Searchable database of UI styles, color palettes, font pairings, chart types, product recommendations, UX guidelines, and stack-specific best practices.
+Searchable database of UI styles, color palettes, font pairings, chart types, UX guidelines, and stack-specific best practices.
+
+---
+
+## Pre-Flight: Auto-Discovery
+
+Trước khi bất cứ thứ gì, kiểm tra những gì đã có:
+
+```
+1. Quét shared/components/ui/ → Tìm components có thể tái sử dụng
+2. Đọc MEMORY.md / UI_SYSTEM.md → Design tokens, color vars, spacing scale hiện tại
+3. Đọc styles/ → Nếu có design tokens → PHẢI dùng, không hardcode
+4. Kiểm tra Python có sẵn → cho bước search bên dưới
+```
+
+> ❌ KHÔNG tạo component mới nếu đã có trong `shared/components/ui/`.
+> ❌ KHÔNG hardcode màu/spacing nếu đã có design tokens.
+
+---
 
 ## Prerequisites
-
-Check if Python is installed:
 
 ```bash
 python3 --version || python --version
 ```
 
-If Python is not installed, install it based on user's OS:
+Nếu chưa có Python:
 
-**macOS:**
-```bash
-brew install python3
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt update && sudo apt install python3
-```
-
-**Windows:**
-```powershell
-winget install Python.Python.3.12
-```
+**macOS:** `brew install python3`
+**Ubuntu:** `sudo apt update && sudo apt install python3`
+**Windows:** `winget install Python.Python.3.12`
 
 ---
 
-## How to Use This Workflow
+## Workflow
 
-When user requests UI/UX work (design, build, create, implement, review, fix, improve), follow this workflow:
+### Step 1: Phân tích Yêu cầu
 
-### Step 1: Analyze User Requirements
+Từ request của user, xác định:
+- **Product type**: SaaS, e-commerce, portfolio, dashboard, landing page...
+- **Style keywords**: minimal, playful, professional, elegant, dark mode...
+- **Industry**: healthcare, fintech, gaming, education...
+- **Stack**: React, Vue, Next.js → default: `html-tailwind`
 
-Extract key information from user request:
-- **Product type**: SaaS, e-commerce, portfolio, dashboard, landing page, etc.
-- **Style keywords**: minimal, playful, professional, elegant, dark mode, etc.
-- **Industry**: healthcare, fintech, gaming, education, etc.
-- **Stack**: React, Vue, Next.js, or default to `html-tailwind`
-
-### Step 2: Search Relevant Domains
-
-Use `search.py` multiple times to gather comprehensive information. Search until you have enough context.
+### Step 2: Search Design Database
 
 ```bash
 python3 .shared/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> [-n <max_results>]
 ```
 
-**Recommended search order:**
+**Thứ tự search khuyến nghị:**
 
-1. **Product** - Get style recommendations for product type
-2. **Style** - Get detailed style guide (colors, effects, frameworks)
-3. **Typography** - Get font pairings with Google Fonts imports
-4. **Color** - Get color palette (Primary, Secondary, CTA, Background, Text, Border)
-5. **Landing** - Get page structure (if landing page)
-6. **Chart** - Get chart recommendations (if dashboard/analytics)
-7. **UX** - Get best practices and anti-patterns
-8. **Stack** - Get stack-specific guidelines (default: html-tailwind)
+| # | Domain | Mục đích |
+|---|---|---|
+| 1 | `product` | Style recommendations cho product type |
+| 2 | `style` | Style guide: colors, effects, frameworks |
+| 3 | `typography` | Font pairings + Google Fonts imports |
+| 4 | `color` | Color palette: Primary, Secondary, CTA, BG, Text, Border |
+| 5 | `landing` | Page structure (chỉ nếu là landing page) |
+| 6 | `chart` | Chart recommendations (chỉ nếu là dashboard) |
+| 7 | `ux` | Best practices + anti-patterns |
+| 8 | Stack flag | Stack-specific guidelines |
 
-### Step 3: Stack Guidelines (Default: html-tailwind)
+### Step 3: Stack Guidelines
 
-If user doesn't specify a stack, **default to `html-tailwind`**.
+Default stack: **`html-tailwind`** nếu user không chỉ định.
 
 ```bash
 python3 .shared/ui-ux-pro-max/scripts/search.py "<keyword>" --stack html-tailwind
 ```
 
-Available stacks: `html-tailwind`, `react`, `nextjs`, `vue`, `svelte`, `swiftui`, `react-native`, `flutter`, `shadcn`
-
----
-
-## Search Reference
-
-### Available Domains
-
-| Domain | Use For | Example Keywords |
-|--------|---------|------------------|
-| `product` | Product type recommendations | SaaS, e-commerce, portfolio, healthcare, beauty, service |
-| `style` | UI styles, colors, effects | glassmorphism, minimalism, dark mode, brutalism |
-| `typography` | Font pairings, Google Fonts | elegant, playful, professional, modern |
-| `color` | Color palettes by product type | saas, ecommerce, healthcare, beauty, fintech, service |
-| `landing` | Page structure, CTA strategies | hero, hero-centric, testimonial, pricing, social-proof |
-| `chart` | Chart types, library recommendations | trend, comparison, timeline, funnel, pie |
-| `ux` | Best practices, anti-patterns | animation, accessibility, z-index, loading |
-| `prompt` | AI prompts, CSS keywords | (style name) |
-
-### Available Stacks
-
-| Stack | Focus |
-|-------|-------|
-| `html-tailwind` | Tailwind utilities, responsive, a11y (DEFAULT) |
-| `react` | State, hooks, performance, patterns |
+| Stack | Khi dùng |
+|---|---|
+| `html-tailwind` | Default — Tailwind utilities, responsive, a11y |
+| `react` | React hooks, state, performance patterns |
 | `nextjs` | SSR, routing, images, API routes |
 | `vue` | Composition API, Pinia, Vue Router |
-| `svelte` | Runes, stores, SvelteKit |
+| `shadcn` | shadcn/ui components, theming, forms |
 | `swiftui` | Views, State, Navigation, Animation |
 | `react-native` | Components, Navigation, Lists |
 | `flutter` | Widgets, State, Layout, Theming |
-| `shadcn` | shadcn/ui components, theming, forms, patterns |
 
 ---
 
-## Example Workflow
+## Ví dụ Workflow
 
-**User request:** "Làm landing page cho dịch vụ chăm sóc da chuyên nghiệp"
-
-**AI should:**
+**Request:** "Làm landing page cho dịch vụ chăm sóc da chuyên nghiệp"
 
 ```bash
-# 1. Search product type
+# 1. Kiểm tra shared/components/ui/ trước (Pre-Flight)
+# → Tìm: Button, Card, Nav components có thể dùng lại
+
+# 2. Search design database
 python3 .shared/ui-ux-pro-max/scripts/search.py "beauty spa wellness service" --domain product
-
-# 2. Search style (based on industry: beauty, elegant)
 python3 .shared/ui-ux-pro-max/scripts/search.py "elegant minimal soft" --domain style
-
-# 3. Search typography
 python3 .shared/ui-ux-pro-max/scripts/search.py "elegant luxury" --domain typography
-
-# 4. Search color palette
 python3 .shared/ui-ux-pro-max/scripts/search.py "beauty spa wellness" --domain color
-
-# 5. Search landing page structure
 python3 .shared/ui-ux-pro-max/scripts/search.py "hero-centric social-proof" --domain landing
-
-# 6. Search UX guidelines
 python3 .shared/ui-ux-pro-max/scripts/search.py "animation" --domain ux
 python3 .shared/ui-ux-pro-max/scripts/search.py "accessibility" --domain ux
-
-# 7. Search stack guidelines (default: html-tailwind)
 python3 .shared/ui-ux-pro-max/scripts/search.py "layout responsive" --stack html-tailwind
+
+# 3. Tổng hợp + implement
 ```
 
-**Then:** Synthesize all search results and implement the design.
-
 ---
 
-## Tips for Better Results
+## Quy tắc UI Chuyên nghiệp
 
-1. **Be specific with keywords** - "healthcare SaaS dashboard" > "app"
-2. **Search multiple times** - Different keywords reveal different insights
-3. **Combine domains** - Style + Typography + Color = Complete design system
-4. **Always check UX** - Search "animation", "z-index", "accessibility" for common issues
-5. **Use stack flag** - Get implementation-specific best practices
-6. **Iterate** - If first search doesn't match, try different keywords
-7. **Split Into Multiple Files** - For better maintainability:
-   - Separate components into individual files (e.g., `Header.tsx`, `Footer.tsx`)
-   - Extract reusable styles into dedicated files
-   - Keep each file focused and under 200-300 lines
+### Icons & Visual
 
----
+| ✅ Làm | ❌ Không làm |
+|---|---|
+| SVG icons (Heroicons, Lucide) | Dùng emoji 🎨 🚀 làm UI icon |
+| Stable hover (color/opacity) | Scale transforms gây layout shift |
+| Official SVG từ Simple Icons | Guess logo paths |
+| Fixed viewBox 24x24 | Mix icon sizes ngẫu nhiên |
 
-## Common Rules for Professional UI
+### Interaction
 
-These are frequently overlooked issues that make UI look unprofessional:
-
-### Icons & Visual Elements
-
-| Rule | Do | Don't |
-|------|----|----- |
-| **No emoji icons** | Use SVG icons (Heroicons, Lucide, Simple Icons) | Use emojis like 🎨 🚀 ⚙️ as UI icons |
-| **Stable hover states** | Use color/opacity transitions on hover | Use scale transforms that shift layout |
-| **Correct brand logos** | Research official SVG from Simple Icons | Guess or use incorrect logo paths |
-| **Consistent icon sizing** | Use fixed viewBox (24x24) with w-6 h-6 | Mix different icon sizes randomly |
-
-### Interaction & Cursor
-
-| Rule | Do | Don't |
-|------|----|----- |
-| **Cursor pointer** | Add `cursor-pointer` to all clickable/hoverable cards | Leave default cursor on interactive elements |
-| **Hover feedback** | Provide visual feedback (color, shadow, border) | No indication element is interactive |
-| **Smooth transitions** | Use `transition-colors duration-200` | Instant state changes or too slow (>500ms) |
+| ✅ Làm | ❌ Không làm |
+|---|---|
+| `cursor-pointer` cho clickable elements | Default cursor trên interactive elements |
+| Visual hover feedback | Không có indication |
+| `transition-colors duration-200` | Instant state changes hoặc >500ms |
 
 ### Light/Dark Mode Contrast
 
-| Rule | Do | Don't |
-|------|----|----- |
-| **Glass card light mode** | Use `bg-white/80` or higher opacity | Use `bg-white/10` (too transparent) |
-| **Text contrast light** | Use `#0F172A` (slate-900) for text | Use `#94A3B8` (slate-400) for body text |
-| **Muted text light** | Use `#475569` (slate-600) minimum | Use gray-400 or lighter |
-| **Border visibility** | Use `border-gray-200` in light mode | Use `border-white/10` (invisible) |
+| ✅ Làm | ❌ Không làm |
+|---|---|
+| `bg-white/80` cho glass card (light) | `bg-white/10` (quá trong suốt) |
+| `#0F172A` (slate-900) cho body text | `#94A3B8` (slate-400) cho body text |
+| `border-gray-200` (light mode) | `border-white/10` (vô hình) |
 
-### Layout & Spacing
+### Layout
 
-| Rule | Do | Don't |
-|------|----|----- |
-| **Floating navbar** | Add `top-4 left-4 right-4` spacing | Stick navbar to `top-0 left-0 right-0` |
-| **Content padding** | Account for fixed navbar height | Let content hide behind fixed elements |
-| **Consistent max-width** | Use same `max-w-6xl` or `max-w-7xl` | Mix different container widths |
+| ✅ Làm | ❌ Không làm |
+|---|---|
+| `top-4 left-4 right-4` cho floating nav | Stick nav sát `top-0 left-0` |
+| Account cho fixed navbar height | Content ẩn sau fixed elements |
+| `max-w-6xl` nhất quán | Mix container widths |
 
 ---
 
 ## Pre-Delivery Checklist
 
-Before delivering UI code, verify these items:
-
-### Visual Quality
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] Brand logos are correct (verified from Simple Icons)
-- [ ] Hover states don't cause layout shift
+### Visual
+- [ ] Không dùng emoji làm icons
+- [ ] Icons từ consistent set (Heroicons/Lucide)
+- [ ] Brand logos đúng (verified từ Simple Icons)
+- [ ] Hover states không gây layout shift
 
 ### Interaction
-- [ ] All clickable elements have `cursor-pointer`
-- [ ] Hover states provide clear visual feedback
-- [ ] Transitions are smooth (150-300ms)
-- [ ] Focus states visible for keyboard navigation
+- [ ] Tất cả clickable elements có `cursor-pointer`
+- [ ] Hover feedback rõ ràng
+- [ ] Transitions 150–300ms
+- [ ] Focus states visible cho keyboard navigation
 
 ### Light/Dark Mode
-- [ ] Light mode text has sufficient contrast (4.5:1 minimum)
-- [ ] Glass/transparent elements visible in light mode
-- [ ] Borders visible in both modes
-- [ ] Test both modes before delivery
+- [ ] Light mode text contrast ≥ 4.5:1
+- [ ] Glass/transparent elements visible ở light mode
+- [ ] Borders visible cả hai modes
 
-### Layout
-- [ ] Floating elements have proper spacing from edges
-- [ ] No content hidden behind fixed navbars
-- [ ] Responsive at 320px, 768px, 1024px, 1440px
-- [ ] No horizontal scroll on mobile
+### Layout & Responsive
+- [ ] Floating elements có đủ spacing
+- [ ] Không content ẩn sau fixed navbars
+- [ ] Responsive tại: 320px, 768px, 1024px, 1440px
+- [ ] Không horizontal scroll trên mobile
 
 ### Accessibility
-- [ ] All images have alt text
-- [ ] Form inputs have labels
-- [ ] Color is not the only indicator
-- [ ] `prefers-reduced-motion` respected
+- [ ] Tất cả images có alt text
+- [ ] Form inputs có labels
+- [ ] Color không phải indicator duy nhất
+- [ ] `prefers-reduced-motion` được tôn trọng
+
+### Code Quality
+- [ ] Dùng design tokens, không hardcode màu/spacing
+- [ ] Tái dùng components từ `shared/components/ui/` khi có
+- [ ] Tách components lớn thành files riêng (<200–300 dòng/file)

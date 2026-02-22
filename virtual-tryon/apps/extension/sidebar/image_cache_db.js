@@ -10,15 +10,21 @@
  * Flow:
  * 1. Mở/tạo IndexedDB 'fitly_image_cache'
  * 2. Store 'images' chứa { key, data, cachedAt, sizeBytes }
- * 3. cacheImage() fetch → blob → base64 → lưu IDB
+ * 3. cacheImage() fetch qua background (tránh CORS) → base64 → lưu IDB
  * 4. getCachedImage() trả về base64 hoặc null
  * 5. Auto cleanup ảnh > 30 ngày
+ * 6. Quota limit 50MB — evict oldest khi đầy
+ *
+ * Fix Log:
+ * - [Fix 6] imageUrlToBase64 now proxies fetch through background SW to avoid CORS
+ * - [Fix 7] Added MAX_CACHE_SIZE_BYTES quota + evictOldestImages LRU cleanup
  */
 
 const IMAGE_CACHE_DB_NAME = 'fitly_image_cache';
 const IMAGE_CACHE_STORE = 'images';
 const IMAGE_CACHE_VERSION = 1;
 const MAX_CACHE_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 ngày
+const MAX_CACHE_SIZE_BYTES = 50 * 1024 * 1024; // FIX 7: 50MB quota
 
 let _dbInstance = null;
 
@@ -52,8 +58,11 @@ function openCacheDB() {
 }
 
 /**
- * Chuyển image URL thành base64 data URL
- * Hỗ trợ: HTTP URLs, data: URLs, blob: URLs
+ * Proxy fetch image URL qua Background Service Worker để tránh CORS
+ * Background SW dùng cross-origin permissions từ manifest — sidebar thì không.
+ *
+ * FIX 6: Replaces direct fetch() with a message-based proxy through the SW.
+ * Handles: HTTP URLs, data: URLs, blob: URLs
  */
 async function imageUrlToBase64(imageUrl) {
     // Đã là data URL → trả về ngay
@@ -62,19 +71,65 @@ async function imageUrlToBase64(imageUrl) {
     }
 
     try {
-        const response = await fetch(imageUrl, { mode: 'cors' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
+        // FIX 6: Route through background SW to bypass CORS restrictions
+        const result = await chrome.runtime.sendMessage({
+            type: 'FETCH_IMAGE_FOR_CACHE',
+            imageUrl: imageUrl,
         });
-    } catch (error) {
-        console.warn('[Fitly Cache] Cannot fetch image:', imageUrl, error.message);
+
+        if (result && result.success && result.base64) {
+            return result.base64;
+        }
+
+        console.warn('[Fitly Cache] Background proxy returned no data for:', imageUrl, result?.error);
         return null;
+    } catch (error) {
+        // Fallback: nếu background không hỗ trợ message này, thử fetch trực tiếp
+        console.warn('[Fitly Cache] Background proxy unavailable, falling back to direct fetch:', error.message);
+        try {
+            const response = await fetch(imageUrl, { mode: 'cors' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (fetchErr) {
+            console.warn('[Fitly Cache] Direct fetch also failed:', imageUrl, fetchErr.message);
+            return null;
+        }
+    }
+}
+
+/**
+ * FIX 7: Evict oldest images khi cache vượt quota
+ */
+async function evictOldestImages(db, requiredBytes) {
+    const tx = db.transaction(IMAGE_CACHE_STORE, 'readwrite');
+    const store = tx.objectStore(IMAGE_CACHE_STORE);
+    const index = store.index('cachedAt');
+
+    // Get all records sorted by oldest first
+    const allRecords = await new Promise((resolve) => {
+        const req = index.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+    });
+
+    let freedBytes = 0;
+    let evictedCount = 0;
+
+    for (const record of allRecords) {
+        if (freedBytes >= requiredBytes) break;
+        store.delete(record.key);
+        freedBytes += record.sizeBytes || 0;
+        evictedCount++;
+    }
+
+    if (evictedCount > 0) {
+        console.log(`[Fitly Cache] Evicted ${evictedCount} old images to free ${Math.round(freedBytes / 1024)}KB`);
     }
 }
 
@@ -90,6 +145,15 @@ async function cacheImage(key, imageUrl) {
         if (!base64) return null;
 
         const db = await openCacheDB();
+
+        // FIX 7: Check quota before writing
+        const stats = await getCacheStats();
+        const newSizeBytes = base64.length;
+        if (stats.totalSizeBytes + newSizeBytes > MAX_CACHE_SIZE_BYTES) {
+            const toFree = (stats.totalSizeBytes + newSizeBytes) - MAX_CACHE_SIZE_BYTES;
+            await evictOldestImages(db, toFree);
+        }
+
         const tx = db.transaction(IMAGE_CACHE_STORE, 'readwrite');
         const store = tx.objectStore(IMAGE_CACHE_STORE);
 
@@ -209,7 +273,7 @@ async function cleanupExpiredCache() {
 }
 
 /**
- * Lấy thống kê cache
+ * Lấy thống kê cache (bao gồm totalSizeBytes để kiểm tra quota)
  */
 async function getCacheStats() {
     try {
@@ -221,16 +285,19 @@ async function getCacheStats() {
             const request = store.getAll();
             request.onsuccess = () => {
                 const records = request.result || [];
-                const totalSize = records.reduce((sum, r) => sum + (r.sizeBytes || 0), 0);
+                const totalSizeBytes = records.reduce((sum, r) => sum + (r.sizeBytes || 0), 0);
                 resolve({
                     count: records.length,
-                    totalSizeMB: Math.round(totalSize / 1024 / 1024 * 100) / 100,
+                    totalSizeBytes: totalSizeBytes, // FIX 7: expose raw bytes for quota check
+                    totalSizeMB: Math.round(totalSizeBytes / 1024 / 1024 * 100) / 100,
+                    maxSizeMB: Math.round(MAX_CACHE_SIZE_BYTES / 1024 / 1024),
+                    usagePercent: Math.round(totalSizeBytes / MAX_CACHE_SIZE_BYTES * 100),
                 });
             };
-            request.onerror = () => resolve({ count: 0, totalSizeMB: 0 });
+            request.onerror = () => resolve({ count: 0, totalSizeBytes: 0, totalSizeMB: 0 });
         });
     } catch (error) {
-        return { count: 0, totalSizeMB: 0 };
+        return { count: 0, totalSizeBytes: 0, totalSizeMB: 0 };
     }
 }
 

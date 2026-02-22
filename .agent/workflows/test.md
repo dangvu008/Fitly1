@@ -2,111 +2,128 @@
 description: Test generation and test running command. Creates and executes tests for code.
 ---
 
+---
+description: Test generation and execution. Creates tests following AAA pattern, colocated with source files, with coverage thresholds.
+---
+
 # /test - Test Generation and Execution
 
 $ARGUMENTS
 
 ---
 
-## Purpose
+## Pre-Flight: Auto-Discovery
 
-This command generates tests, runs existing tests, or checks test coverage.
+```
+1. Detect test framework: Jest / Vitest / pytest / RSpec (đọc package.json hoặc requirements.txt)
+2. Đọc test files hiện tại → nhận biết patterns đang dùng
+3. Kiểm tra terminal-mcp → chạy tests tự động
+```
 
 ---
 
 ## Sub-commands
 
 ```
-/test                - Run all tests
-/test [file/feature] - Generate tests for specific target
-/test coverage       - Show test coverage report
-/test watch          - Run tests in watch mode
+/test                    - Chạy tất cả tests
+/test [file/feature]     - Tạo tests cho target cụ thể
+/test coverage           - Hiển thị coverage report
+/test watch              - Chạy tests ở watch mode
+/test fix                - Phân tích và fix failing tests
 ```
+
+---
+
+## Coverage Thresholds (theo antigravity-rules §12)
+
+| Layer | Threshold |
+|---|---|
+| Utils / Pure functions | **90%+** |
+| API / Services | **80%+** |
+| UI Components | **70%+** |
+| Critical flows (auth, payment) | **100% E2E** |
+
+> Báo cáo khi coverage dưới threshold — đừng tự nghĩ "đủ rồi".
 
 ---
 
 ## Behavior
 
-### Generate Tests
+### Khi tạo tests cho file/feature
 
-When asked to test a file or feature:
+1. **Phân tích code**
+   - Identify functions, methods, edge cases
+   - Tìm external dependencies cần mock
+   - Đọc test files đã có → follow existing patterns
 
-1. **Analyze the code**
-   - Identify functions and methods
-   - Find edge cases
-   - Detect dependencies to mock
-
-2. **Generate test cases**
-   - Happy path tests
+2. **Tạo test cases**
+   - Happy path
    - Error cases
-   - Edge cases
-   - Integration tests (if needed)
+   - Edge cases (null, empty, boundary values)
+   - Integration tests nếu cần
 
-3. **Write tests**
-   - Use project's test framework (Jest, Vitest, etc.)
-   - Follow existing test patterns
+3. **Viết tests**
+   - Colocated: `feature.ts` + `feature.test.ts` kề nhau
+   - Theo AAA pattern (Arrange-Act-Assert)
    - Mock external dependencies
+   - Tên test mô tả hành vi, không mô tả implementation
 
 ---
 
 ## Output Format
 
-### For Test Generation
+### Tạo tests
 
 ```markdown
 ## 🧪 Tests: [Target]
 
 ### Test Plan
 | Test Case | Type | Coverage |
-|-----------|------|----------|
-| Should create user | Unit | Happy path |
+|---|---|---|
+| Should create user successfully | Unit | Happy path |
 | Should reject invalid email | Unit | Validation |
-| Should handle db error | Unit | Error case |
+| Should handle DB connection error | Unit | Error case |
+| Should login and access protected route | E2E | Critical flow |
 
-### Generated Tests
+### File tạo ra
+`src/features/auth/auth.service.test.ts`
 
-`tests/[file].test.ts`
-
-[Code block with tests]
+[Code block]
 
 ---
 
-Run with: `npm test`
+Chạy với: `npm test`
+Coverage check: `npm run test:coverage`
 ```
 
-### For Test Execution
+### Khi chạy tests
 
 ```
 🧪 Running tests...
 
-✅ auth.test.ts (5 passed)
-✅ user.test.ts (8 passed)
-❌ order.test.ts (2 passed, 1 failed)
+✅ auth.test.ts        (5/5 passed)
+✅ user.test.ts        (8/8 passed)
+❌ order.test.ts       (2/3 — 1 failed)
 
-Failed:
+FAILED: order.test.ts
   ✗ should calculate total with discount
     Expected: 90
     Received: 100
+    → Lỗi tại: calculate_order_total.ts:47
+
+Coverage:
+  Utils:      94% ✅ (threshold: 90%)
+  Services:   78% ⚠️ (threshold: 80%) ← cần thêm tests
+  Components: 72% ✅ (threshold: 70%)
 
 Total: 15 tests (14 passed, 1 failed)
 ```
 
 ---
 
-## Examples
-
-```
-/test src/services/auth.service.ts
-/test user registration flow
-/test coverage
-/test fix failed tests
-```
-
----
-
 ## Test Patterns
 
-### Unit Test Structure
+### Unit Test — AAA
 
 ```typescript
 describe('AuthService', () => {
@@ -114,20 +131,28 @@ describe('AuthService', () => {
     it('should return token for valid credentials', async () => {
       // Arrange
       const credentials = { email: 'test@test.com', password: 'pass123' };
-      
+      mockUserRepo.findByEmail.mockResolvedValue(validUser);
+
       // Act
       const result = await authService.login(credentials);
-      
+
       // Assert
       expect(result.token).toBeDefined();
+      expect(result.token).toMatch(/^eyJ/); // JWT format
     });
 
-    it('should throw for invalid password', async () => {
+    it('should throw UnauthorizedError for wrong password', async () => {
       // Arrange
       const credentials = { email: 'test@test.com', password: 'wrong' };
-      
+
       // Act & Assert
-      await expect(authService.login(credentials)).rejects.toThrow('Invalid credentials');
+      await expect(authService.login(credentials))
+        .rejects.toThrow('Invalid credentials');
+    });
+
+    it('should throw for non-existent user', async () => {
+      mockUserRepo.findByEmail.mockResolvedValue(null);
+      await expect(authService.login(credentials)).rejects.toThrow();
     });
   });
 });
@@ -137,8 +162,21 @@ describe('AuthService', () => {
 
 ## Key Principles
 
-- **Test behavior not implementation**
-- **One assertion per test** (when practical)
-- **Descriptive test names**
-- **Arrange-Act-Assert pattern**
-- **Mock external dependencies**
+- **Test hành vi, không test implementation** — nếu refactor không breaking, test không nên fail
+- **Một assertion có ý nghĩa mỗi test** (có thể có nhiều expect nếu cùng verify một concept)
+- **Tên test = tài liệu** — đọc tên là hiểu luồng
+- **AAA pattern bắt buộc**
+- **Mock external dependencies** — DB, API, filesystem
+- **Colocated** — test file kề source file, không đặt riêng vào `/tests`
+
+---
+
+## Examples
+
+```
+/test src/services/auth.service.ts
+/test user registration flow
+/test coverage
+/test watch
+/test fix
+```

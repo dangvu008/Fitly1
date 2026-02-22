@@ -2,92 +2,105 @@
 description: Coordinate multiple agents for complex tasks. Use for multi-perspective analysis, comprehensive reviews, or tasks requiring different domain expertise.
 ---
 
-# Multi-Agent Orchestration
+---
+description: Coordinate multiple agents for complex tasks. Multi-perspective analysis, comprehensive reviews, tasks requiring different domain expertise. Minimum 3 agents required.
+---
 
-You are now in **ORCHESTRATION MODE**. Your task: coordinate specialized agents to solve this complex problem.
+# /orchestrate - Multi-Agent Orchestration
 
-## Task to Orchestrate
 $ARGUMENTS
 
 ---
 
-## 🔴 CRITICAL: Minimum Agent Requirement
+## Pre-Flight: Auto-Discovery
 
-> ⚠️ **ORCHESTRATION = MINIMUM 3 DIFFERENT AGENTS**
-> 
-> If you use fewer than 3 agents, you are NOT orchestrating - you're just delegating.
-> 
-> **Validation before completion:**
-> - Count invoked agents
-> - If `agent_count < 3` → STOP and invoke more agents
-> - Single agent = FAILURE of orchestration
+```
+1. Đọc ARCHITECTURE.md + CODEBASE.md → Hiểu toàn bộ scope
+2. Kiểm tra docs/PLAN-*.md → Plan đã có chưa?
+3. Xác định domains bị ảnh hưởng → Chọn agents phù hợp
+```
+
+---
+
+## 🔴 Yêu cầu tối thiểu: 3 AGENTS KHÁC NHAU
+
+> Nếu dùng ít hơn 3 agents → KHÔNG phải orchestration, chỉ là delegation.
+>
+> Kiểm tra trước khi kết thúc: `agent_count >= 3` → nếu không, gọi thêm agents.
 
 ### Agent Selection Matrix
 
-| Task Type | REQUIRED Agents (minimum) |
-|-----------|---------------------------|
-| **Web App** | frontend-specialist, backend-specialist, test-engineer |
-| **API** | backend-specialist, security-auditor, test-engineer |
-| **UI/Design** | frontend-specialist, seo-specialist, performance-optimizer |
-| **Database** | database-architect, backend-specialist, security-auditor |
-| **Full Stack** | project-planner, frontend-specialist, backend-specialist, devops-engineer |
-| **Debug** | debugger, explorer-agent, test-engineer |
-| **Security** | security-auditor, penetration-tester, devops-engineer |
+| Loại task | Agents BẮT BUỘC |
+|---|---|
+| Web App | frontend-specialist, backend-specialist, test-engineer |
+| API | backend-specialist, security-auditor, test-engineer |
+| UI/Design | frontend-specialist, seo-specialist, performance-optimizer |
+| Database | database-architect, backend-specialist, security-auditor |
+| Full Stack | project-planner, frontend-specialist, backend-specialist, devops-engineer |
+| Debug | debugger, explorer-agent, test-engineer |
+| Security | security-auditor, penetration-tester, devops-engineer |
 
 ---
 
-## Pre-Flight: Mode Check
+## 🔴 2-PHASE ORCHESTRATION PROTOCOL
 
-| Current Mode | Task Type | Action |
-|--------------|-----------|--------|
-| **plan** | Any | ✅ Proceed with planning-first approach |
-| **edit** | Simple execution | ✅ Proceed directly |
-| **edit** | Complex/multi-file | ⚠️ Ask: "This task requires planning. Switch to plan mode?" |
-| **ask** | Any | ⚠️ Ask: "Ready to orchestrate. Switch to edit or plan mode?" |
+### PHASE 1: PLANNING (Sequential — không chạy parallel)
 
----
+| Bước | Agent | Action |
+|---|---|---|
+| 1 | `project-planner` | Tạo `docs/PLAN.md` |
+| 2 | `explorer-agent` (tùy chọn) | Khám phá codebase nếu cần |
 
-## 🔴 STRICT 2-PHASE ORCHESTRATION
+> 🔴 **KHÔNG dùng agent khác trong Phase 1.** Chỉ project-planner + explorer-agent.
 
-### PHASE 1: PLANNING (Sequential - NO parallel agents)
-
-| Step | Agent | Action |
-|------|-------|--------|
-| 1 | `project-planner` | Create docs/PLAN.md |
-| 2 | (optional) `explorer-agent` | Codebase discovery if needed |
-
-> 🔴 **NO OTHER AGENTS during planning!** Only project-planner and explorer-agent.
-
-### ⏸️ CHECKPOINT: User Approval
+### ⏸️ CHECKPOINT: Xác nhận của User
 
 ```
-After PLAN.md is complete, ASK:
+Sau khi PLAN.md hoàn thành, hỏi user:
 
-"✅ Plan oluşturuldu: docs/PLAN.md
+"✅ Plan đã tạo: docs/PLAN.md
 
-Onaylıyor musunuz? (Y/N)
-- Y: Implementation başlatılır
-- N: Planı düzeltirim"
+Bạn có muốn bắt đầu implementation không?
+- Y: Tiến hành Phase 2
+- N: Tôi sẽ chỉnh sửa plan"
 ```
 
-> 🔴 **DO NOT proceed to Phase 2 without explicit user approval!**
+> 🔴 **KHÔNG chuyển sang Phase 2 khi chưa có xác nhận rõ ràng từ user.**
 
-### PHASE 2: IMPLEMENTATION (Parallel agents after approval)
+### PHASE 2: IMPLEMENTATION (Parallel — sau khi user xác nhận)
 
-| Parallel Group | Agents |
-|----------------|--------|
+| Nhóm | Agents |
+|---|---|
 | Foundation | `database-architect`, `security-auditor` |
 | Core | `backend-specialist`, `frontend-specialist` |
 | Polish | `test-engineer`, `devops-engineer` |
 
-> ✅ After user approval, invoke multiple agents in PARALLEL.
+---
 
-## Available Agents (17 total)
+## Context Passing — BẮT BUỘC khi gọi subagent
 
-| Agent | Domain | Use When |
-|-------|--------|----------|
-| `project-planner` | Planning | Task breakdown, PLAN.md |
-| `explorer-agent` | Discovery | Codebase mapping |
+Mỗi subagent phải nhận đủ context:
+
+```
+**CONTEXT:**
+- Yêu cầu gốc: [full text của user]
+- Quyết định đã có: [kết quả Socratic Gate]
+- Công việc agents trước: [tóm tắt những gì đã làm]
+- Plan hiện tại: [nội dung PLAN.md nếu có]
+
+**TASK:** [nhiệm vụ cụ thể cho agent này]
+```
+
+> ⚠️ Gọi subagent thiếu context = subagent sẽ đưa ra giả định sai.
+
+---
+
+## Available Agents (17)
+
+| Agent | Domain | Dùng khi |
+|---|---|---|
+| `project-planner` | Planning | Task breakdown, tạo PLAN.md |
+| `explorer-agent` | Discovery | Khám phá codebase |
 | `frontend-specialist` | UI/UX | React, Vue, CSS, HTML |
 | `backend-specialist` | Server | API, Node.js, Python |
 | `database-architect` | Data | SQL, NoSQL, Schema |
@@ -105,81 +118,22 @@ Onaylıyor musunuz? (Y/N)
 
 ---
 
-## Orchestration Protocol
+## Phase Detection
 
-### Step 1: Analyze Task Domains
-Identify ALL domains this task touches:
-```
-□ Security     → security-auditor, penetration-tester
-□ Backend/API  → backend-specialist
-□ Frontend/UI  → frontend-specialist
-□ Database     → database-architect
-□ Testing      → test-engineer
-□ DevOps       → devops-engineer
-□ Mobile       → mobile-developer
-□ Performance  → performance-optimizer
-□ SEO          → seo-specialist
-□ Planning     → project-planner
-```
+| Trạng thái | Action |
+|---|---|
+| KHÔNG có `docs/PLAN.md` | → Vào PHASE 1 (planning only) |
+| Có `docs/PLAN.md` + user đã xác nhận | → Vào PHASE 2 (implementation) |
 
-### Step 2: Phase Detection
+---
 
-| If Plan Exists | Action |
-|----------------|--------|
-| NO `docs/PLAN.md` | → Go to PHASE 1 (planning only) |
-| YES `docs/PLAN.md` + user approved | → Go to PHASE 2 (implementation) |
+## Verification (MANDATORY — bước cuối cùng)
 
-### Step 3: Execute Based on Phase
-
-**PHASE 1 (Planning):**
-```
-Use the project-planner agent to create PLAN.md
-→ STOP after plan is created
-→ ASK user for approval
-```
-
-**PHASE 2 (Implementation - after approval):**
-```
-Invoke agents in PARALLEL:
-Use the frontend-specialist agent to [task]
-Use the backend-specialist agent to [task]
-Use the test-engineer agent to [task]
-```
-
-**🔴 CRITICAL: Context Passing (MANDATORY)**
-
-When invoking ANY subagent, you MUST include:
-
-1. **Original User Request:** Full text of what user asked
-2. **Decisions Made:** All user answers to Socratic questions
-3. **Previous Agent Work:** Summary of what previous agents did
-4. **Current Plan State:** If `~/.claude/plans/` has a plan, include it
-
-**Example with FULL context:**
-```
-Use the project-planner agent to create PLAN.md:
-
-**CONTEXT:**
-- User Request: "Öğrenciler için sosyal platform, mock data ile"
-- Decisions: Tech=Vue 3, Layout=Grid Widget, Auth=Mock, Design=Genç Dinamik
-- Previous Work: Orchestrator asked 6 questions, user chose all options
-- Current Plan: ~/.claude/plans/playful-roaming-dream.md exists with initial structure
-
-**TASK:** Create detailed PLAN.md based on ABOVE decisions. Do NOT infer from folder name.
-```
-
-> ⚠️ **VIOLATION:** Invoking subagent without full context = subagent will make wrong assumptions!
-
-
-### Step 4: Verification (MANDATORY)
-The LAST agent must run appropriate verification scripts:
+Agent cuối cùng phải chạy:
 ```bash
 python ~/.claude/skills/vulnerability-scanner/scripts/security_scan.py .
 python ~/.claude/skills/lint-and-validate/scripts/lint_runner.py .
 ```
-
-### Step 5: Synthesize Results
-Combine all agent outputs into unified report.
 
 ---
 
@@ -189,49 +143,42 @@ Combine all agent outputs into unified report.
 ## 🎼 Orchestration Report
 
 ### Task
-[Original task summary]
+[Tóm tắt task gốc]
 
-### Mode
-[Current Claude Code mode: plan/edit/ask]
-
-### Agents Invoked (MINIMUM 3)
-| # | Agent | Focus Area | Status |
-|---|-------|------------|--------|
+### Agents Invoked (tối thiểu 3)
+| # | Agent | Nhiệm vụ | Trạng thái |
+|---|---|---|---|
 | 1 | project-planner | Task breakdown | ✅ |
 | 2 | frontend-specialist | UI implementation | ✅ |
-| 3 | test-engineer | Verification scripts | ✅ |
+| 3 | test-engineer | Verification | ✅ |
 
-### Verification Scripts Executed
-- [x] security_scan.py → Pass/Fail
-- [x] lint_runner.py → Pass/Fail
+### Verification
+- [x] security_scan.py → Pass
+- [x] lint_runner.py → Pass
 
 ### Key Findings
-1. **[Agent 1]**: Finding
-2. **[Agent 2]**: Finding
-3. **[Agent 3]**: Finding
+1. **[Agent 1]**: [Finding]
+2. **[Agent 2]**: [Finding]
+3. **[Agent 3]**: [Finding]
 
 ### Deliverables
-- [ ] PLAN.md created
+- [ ] PLAN.md tạo xong
 - [ ] Code implemented
 - [ ] Tests passing
 - [ ] Scripts verified
 
 ### Summary
-[One paragraph synthesis of all agent work]
+[Tổng hợp kết quả từ tất cả agents]
 ```
 
 ---
 
-## 🔴 EXIT GATE
+## 🔴 Exit Gate
 
-Before completing orchestration, verify:
+Trước khi đánh dấu orchestration hoàn thành:
 
-1. ✅ **Agent Count:** `invoked_agents >= 3`
-2. ✅ **Scripts Executed:** At least `security_scan.py` ran
-3. ✅ **Report Generated:** Orchestration Report with all agents listed
+1. ✅ `agent_count >= 3`
+2. ✅ `security_scan.py` đã chạy
+3. ✅ Orchestration Report đã có đủ agents
 
-> **If any check fails → DO NOT mark orchestration complete. Invoke more agents or run scripts.**
-
----
-
-**Begin orchestration now. Select 3+ agents, execute sequentially, run verification scripts, synthesize results.**
+> Nếu bất kỳ check nào fail → GỌI THÊM AGENTS hoặc chạy scripts còn thiếu.

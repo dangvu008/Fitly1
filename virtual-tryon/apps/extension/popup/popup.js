@@ -23,6 +23,8 @@ let state = {
 const $ = (id) => document.getElementById(id);
 
 const elements = {
+    header: document.querySelector('.header'),
+    loadingSection: $('loading-section'),
     authSection: $('auth-section'),
     mainSection: $('main-section'),
     loginBtn: $('login-btn'),
@@ -52,7 +54,22 @@ const elements = {
 // ==========================================
 
 async function init() {
-    await checkAuthState();
+    // Show loading initially (it's visible in HTML by default, but let's be explicit)
+    showLoading();
+
+    // Race condition: Auth check vs Timeout
+    // If auth check takes too long (> 5s), we fallback to auth section
+    const authCheckPromise = checkAuthState();
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 5000));
+
+    const result = await Promise.race([authCheckPromise, timeoutPromise]);
+
+    if (result === 'TIMEOUT') {
+        console.warn('Auth check timed out, falling back to login screen');
+        state.authenticated = false;
+        showAuthSection();
+    }
+
     setupEventListeners();
 }
 
@@ -60,7 +77,7 @@ async function checkAuthState() {
     try {
         const response = await chrome.runtime.sendMessage({ type: 'GET_AUTH_STATE' });
 
-        if (response.authenticated) {
+        if (response && response.authenticated) {
             state.authenticated = true;
             state.user = response.user;
             state.profile = response.profile;
@@ -79,13 +96,24 @@ async function checkAuthState() {
 // UI STATE
 // ==========================================
 
+function showLoading() {
+    elements.loadingSection?.classList.remove('hidden');
+    elements.authSection?.classList.add('hidden');
+    elements.mainSection?.classList.add('hidden');
+    elements.header?.classList.add('hidden');
+}
+
 function showAuthSection() {
+    elements.loadingSection?.classList.add('hidden');
+    elements.header?.classList.remove('hidden');
     elements.authSection?.classList.remove('hidden');
     elements.mainSection?.classList.add('hidden');
     elements.gemsBadge?.classList.add('hidden');
 }
 
 function showMainSection() {
+    elements.loadingSection?.classList.add('hidden');
+    elements.header?.classList.remove('hidden');
     elements.authSection?.classList.add('hidden');
     elements.mainSection?.classList.remove('hidden');
     elements.gemsBadge?.classList.remove('hidden');
@@ -96,7 +124,8 @@ function showMainSection() {
         elements.userName.textContent = displayName;
     }
     if (elements.userEmail && state.user) {
-        elements.userEmail.textContent = state.user.email || '';
+        const email = state.user.email || '';
+        elements.userEmail.textContent = email.includes('@') ? email.split('@')[0] + '@fitly.ai' : email;
     }
     if (elements.gemsCount && state.profile) {
         elements.gemsCount.textContent = state.profile.gems_balance || 0;
@@ -120,7 +149,8 @@ function showMainSection() {
         elements.menuUsername.textContent = displayName;
     }
     if (elements.menuEmail) {
-        elements.menuEmail.textContent = state.user?.email || '';
+        const email = state.user?.email || '';
+        elements.menuEmail.textContent = email.includes('@') ? email.split('@')[0] + '@fitly.ai' : email;
     }
     if (elements.menuAvatar) {
         if (avatarUrl) {
@@ -161,44 +191,37 @@ function closeProfileMenu() {
 
 function setupEventListeners() {
     // Login button - opens login popup
+    // Login button - triggers native Google Sign In
     elements.loginBtn?.addEventListener('click', async () => {
-        let serverUrl;
+        // Visual feedback
+        const originalText = elements.loginBtn.textContent;
+        elements.loginBtn.textContent = 'Đang kết nối...';
+        elements.loginBtn.disabled = true;
+
         try {
-            const response = await chrome.runtime.sendMessage({ type: 'GET_SERVER_URL' });
-            serverUrl = response.url;
+            // Call service worker to handle Google Sign-In
+            const response = await chrome.runtime.sendMessage({ type: 'GOOGLE_SIGN_IN' });
+
+            if (response && response.success) {
+                // Success - UI will update via AUTH_STATE_CHANGED listener
+                // But we can also force a check
+                await checkAuthState();
+            } else {
+                // Failed
+                console.error('Login failed:', response?.error);
+                alert('Đăng nhập thất bại: ' + (response?.error || 'Lỗi không xác định'));
+
+                // Reset button
+                elements.loginBtn.textContent = originalText;
+                elements.loginBtn.disabled = false;
+            }
         } catch (error) {
-            serverUrl = 'http://localhost:3000';
-        }
+            console.error('Login communication error:', error);
+            alert('Không thể kết nối tới Google Sign-In');
 
-        try {
-            await fetch(`${serverUrl}/api/auth/me`, {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' },
-                cache: 'no-store',
-            }).catch(() => null);
-        } catch (error) { }
-
-        const popupUrl = `${serverUrl}/auth/popup`;
-        const popupWidth = 400;
-        const popupHeight = 600;
-        const left = Math.round((screen.width - popupWidth) / 2);
-        const top = Math.round((screen.height - popupHeight) / 2);
-
-        try {
-            await chrome.windows.create({
-                url: popupUrl,
-                type: 'popup',
-                width: popupWidth,
-                height: popupHeight,
-                left: left,
-                top: top,
-                focused: true
-            });
-            window.close();
-        } catch (error) {
-            console.error('Failed to open popup, falling back to tab:', error);
-            chrome.tabs.create({ url: popupUrl });
-            window.close();
+            // Reset button
+            elements.loginBtn.textContent = originalText;
+            elements.loginBtn.disabled = false;
         }
     });
 

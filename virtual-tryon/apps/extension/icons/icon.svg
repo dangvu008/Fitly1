@@ -1,40 +1,89 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="fitly-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f97316"/>
-      <stop offset="100%" stop-color="#ec4899"/>
+    <!-- Main background gradient: deep purple → hot pink -->
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3D0066"/>
+      <stop offset="50%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#EC4899"/>
     </linearGradient>
+
+    <!-- Inner glow gradient for icon elements -->
+    <linearGradient id="icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#F9A8D4" stop-opacity="0.85"/>
+    </linearGradient>
+
+    <!-- Subtle inner background highlight -->
+    <radialGradient id="bg-highlight" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#9F67FF" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#3D0066" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
   </defs>
-  
-  <!-- Background with gradient -->
-  <rect width="512" height="512" rx="108" fill="url(#fitly-gradient)"/>
-  
-  <!-- T-shirt icon (matching web app FitlyLogo.tsx) -->
-  <g transform="translate(256, 270) scale(0.7) translate(-256, -256)">
-    <!-- Body -->
-    <path 
-      d="M160 180 L160 400 C160 415 172 427 187 427 L325 427 C340 427 352 415 352 400 L352 180" 
-      fill="white"
-    />
-    <!-- Collar -->
-    <path 
-      d="M200 130 C200 130 220 160 256 160 C292 160 312 130 312 130 L352 180 L256 200 L160 180 L200 130 Z" 
-      fill="white"
-    />
-    <!-- Left sleeve -->
-    <path 
-      d="M160 180 L100 220 C90 226 85 240 90 252 L120 300 C125 310 138 315 150 310 L160 280" 
-      fill="white"
-    />
-    <!-- Right sleeve -->
-    <path 
-      d="M352 180 L412 220 C422 226 427 240 422 252 L392 300 C387 310 374 315 362 310 L352 280" 
-      fill="white"
-    />
+
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg-gradient)"/>
+  <!-- Inner highlight overlay -->
+  <rect width="512" height="512" rx="112" fill="url(#bg-highlight)"/>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  ICON: Stylized "F" + Dress Silhouette    -->
+  <!-- ══════════════════════════════════════════ -->
+
+  <g filter="url(#shadow)">
+    <!-- Dress silhouette (right side, slightly overlapping F) -->
+    <g opacity="0.92">
+      <!-- Dress: v-neck bodice -->
+      <path d="
+        M 295 145
+        C 295 145, 320 148, 340 145
+        L 380 230
+        L 355 230
+        L 345 215
+        L 345 380
+        C 345 390, 337 398, 327 398
+        L 263 398
+        C 253 398, 245 390, 245 380
+        L 245 215
+        L 235 230
+        L 210 230
+        L 250 145
+        C 262 148, 283 148, 295 145
+        Z
+      " fill="url(#icon-gradient)"/>
+
+      <!-- V-neck cutout on dress -->
+      <path d="
+        M 295 145
+        L 317.5 190
+        L 295 182
+        L 272.5 190
+        Z
+      " fill="#7C3AED" opacity="0.5"/>
+    </g>
+
+    <!-- Stylized "F" lettermark (left side, tall and bold) -->
+    <g>
+      <!-- Vertical stem of F -->
+      <rect x="118" y="128" width="58" height="270" rx="10" fill="url(#icon-gradient)"/>
+
+      <!-- Top horizontal bar of F (wide) -->
+      <rect x="118" y="128" width="180" height="56" rx="10" fill="url(#icon-gradient)"/>
+
+      <!-- Middle horizontal bar of F (shorter, elegant) -->
+      <rect x="118" y="238" width="140" height="50" rx="10" fill="url(#icon-gradient)"/>
+    </g>
+
+    <!-- Small sparkle top-right for premium feel -->
+    <g opacity="0.9">
+      <path d="M 410 108 L 416 126 L 432 132 L 416 138 L 410 156 L 404 138 L 388 132 L 404 126 Z" fill="white"/>
+    </g>
+    <!-- Tiny sparkle bottom-right -->
+    <circle cx="442" cy="182" r="6" fill="white" opacity="0.6"/>
+    <circle cx="388" cy="100" r="4" fill="white" opacity="0.45"/>
   </g>
-  
-  <!-- Sparkle effects -->
-  <circle cx="390" cy="130" r="15" fill="white" opacity="0.8"/>
-  <circle cx="415" cy="165" r="10" fill="white" opacity="0.6"/>
-  <circle cx="430" cy="115" r="7" fill="white" opacity="0.5"/>
 </svg>
