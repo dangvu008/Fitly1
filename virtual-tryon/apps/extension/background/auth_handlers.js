@@ -73,6 +73,7 @@ export async function handleStoreAuthToken(payload) {
 }
 
 export async function handleGoogleSignIn() {
+    console.log('[DEBUG-AUTH-LOGIN] handleGoogleSignIn called');
     try {
         const redirectUrl = chrome.identity.getRedirectURL();
 
@@ -104,6 +105,10 @@ export async function handleGoogleSignIn() {
         const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
         const expiresIn = parseInt(hashParams.get('expires_in') || queryParams.get('expires_in') || '3600');
+        console.log('[DEBUG-AUTH-LOGIN] OAuth callback parsed:');
+        console.log('[DEBUG-AUTH-LOGIN]   accessToken:', accessToken ? `exists (${accessToken.substring(0, 30)}...)` : 'NULL');
+        console.log('[DEBUG-AUTH-LOGIN]   refreshToken:', refreshToken ? `exists (${refreshToken.substring(0, 20)}...)` : '⚠️ NULL — THIẾU REFRESH TOKEN!');
+        console.log('[DEBUG-AUTH-LOGIN]   expiresIn:', expiresIn, 's');
 
         if (!accessToken) {
             const code = hashParams.get('code') || queryParams.get('code');
@@ -130,6 +135,9 @@ export async function handleGoogleSignIn() {
         }
 
         const expiresAt = (Date.now() / 1000 + expiresIn) * 1000;
+        console.log('[DEBUG-AUTH-LOGIN] Saving token to storage...');
+        console.log('[DEBUG-AUTH-LOGIN]   expiresAt:', expiresAt, '| TTL:', expiresIn, 's');
+        console.log('[DEBUG-AUTH-LOGIN]   refresh_token being saved:', refreshToken ? 'YES' : '❌ NO — sẽ ko refresh được sau này!');
         await chrome.storage.local.set({
             auth_token: accessToken,
             refresh_token: refreshToken,
@@ -203,6 +211,10 @@ async function _saveOAuthSession(sessionData, supabaseUrl, anonKey) {
 }
 
 export async function handleAuthSuccess(session) {
+    console.log('[DEBUG-AUTH-LOGIN] handleAuthSuccess called');
+    console.log('[DEBUG-AUTH-LOGIN] session:', session ? 'exists' : 'NULL');
+    console.log('[DEBUG-AUTH-LOGIN] access_token:', session?.access_token ? `exists (${session.access_token.substring(0, 30)}...)` : 'NULL');
+    console.log('[DEBUG-AUTH-LOGIN] refresh_token:', session?.refresh_token ? `exists (${session.refresh_token.substring(0, 20)}...)` : 'NULL');
     log('[Fitly] Auth success received from popup');
 
     if (!session || !session.access_token) {
@@ -218,6 +230,8 @@ export async function handleAuthSuccess(session) {
             expires_at: Date.now() + 3600 * 1000,
             cached_user: session.user,
         });
+        console.log('[DEBUG-AUTH-LOGIN] ✅ Token saved to chrome.storage.local');
+        console.log('[DEBUG-AUTH-LOGIN] expires_at set to:', Date.now() + 3600 * 1000, '(+1 hour)');
 
         await updateCachedAuthState();
 
@@ -346,14 +360,20 @@ export { handleSocialLogin } from './auth_social.js';
 
 
 export async function handleGetAuthState() {
+    console.log('[DEBUG-AUTH-STATE] handleGetAuthState() called');
+    console.log('[DEBUG-AUTH-STATE] Timestamp:', new Date().toISOString());
     try {
         // Dùng Supabase session thay vì localStorage token
         const { data: { session }, error } = await getSupabaseSession();
+        console.log('[DEBUG-AUTH-STATE] getSupabaseSession result:', session ? 'HAS SESSION' : 'NO SESSION', '| error:', error?.message || 'none');
 
         if (error || !session) {
+            console.log('[DEBUG-AUTH-STATE] No session, checking legacy auth_token...');
             // Fallback: check legacy auth_token storage
             const legacyData = await chrome.storage.local.get(['auth_token', 'expires_at']);
             if (legacyData.auth_token && legacyData.expires_at && Date.now() < legacyData.expires_at) {
+                const ttl = Math.floor((legacyData.expires_at - Date.now()) / 1000);
+                console.log('[DEBUG-AUTH-STATE] Legacy token found, TTL:', ttl, 's');
                 // Token còn hạn, fetch profile từ Supabase
                 const profileData = await fetchProfileFromSupabase(legacyData.auth_token);
                 if (profileData) {
@@ -378,6 +398,9 @@ export async function handleGetAuthState() {
         }
 
         // Session hợp lệ → Clear guest mode, fetch profile
+        console.log('[DEBUG-AUTH-STATE] ✅ Valid session found, syncing to legacy keys...');
+        const sessionTTL = session.expires_at ? Math.floor((session.expires_at * 1000 - Date.now()) / 1000) : 'N/A';
+        console.log('[DEBUG-AUTH-STATE] Session TTL:', sessionTTL, 's, user:', session.user?.id);
         await chrome.storage.local.remove(['guest_mode', 'guest_gems_balance']);
 
         // Sync session sang legacy keys để compatibility

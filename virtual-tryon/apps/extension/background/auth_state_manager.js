@@ -84,11 +84,13 @@ export async function updateCachedAuthState() {
 }
 
 export async function getAuthToken() {
+    console.log('[DEBUG-AUTH] getAuthToken() called');
     const data = await chrome.storage.local.get(['auth_token', 'expires_at', 'refresh_token']);
 
     if (data.auth_token && data.expires_at) {
         const now = Date.now();
         const timeUntilExpiry = data.expires_at - now;
+        console.log('[DEBUG-AUTH] Token found, TTL:', Math.floor(timeUntilExpiry / 1000), 's');
 
         // Token hoàn toàn hết hạn → không dùng được
         if (timeUntilExpiry <= 0) {
@@ -102,11 +104,13 @@ export async function getAuthToken() {
                 }
             }
             // Token expired và không refresh được → return null
+            console.error('[DEBUG-AUTH] Token expired and refresh failed — returning null');
             return null;
         }
 
         // Token còn hạn nhưng < 10 phút → proactive refresh
         if (timeUntilExpiry < 10 * 60 * 1000) {
+            console.log('[DEBUG-AUTH] Token expiring soon (<10m), proactive refresh...');
             try {
                 const refreshed = await refreshAuthToken(data.refresh_token);
                 if (refreshed) return refreshed;
@@ -118,6 +122,7 @@ export async function getAuthToken() {
         }
 
         // Token còn hạn dài → dùng trực tiếp
+        console.log('[DEBUG-AUTH] Token valid with sufficient TTL, using directly');
         return data.auth_token;
     }
 
@@ -166,6 +171,7 @@ export async function getAuthToken() {
             return sessionData.access_token;
         }
     }
+    console.log('[DEBUG-AUTH] No legacy token, returning null');
     return null;
 }
 

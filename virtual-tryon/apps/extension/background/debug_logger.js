@@ -10,7 +10,7 @@
  *   error('[Module]', 'message', err);  // Always logs (errors are critical)
  */
 
-const DEBUG_LOGGING = false; // Set true for development, false for production
+const DEBUG_LOGGING = true; // ⚠️ TEMPORARY: Set true for debugging session expiry — revert to false when done
 
 export function log(...args) {
     if (DEBUG_LOGGING) {

@@ -59,9 +59,26 @@ async function uploadTryonResultToStorage(tempUrl, userId, tryonId) {
 }
 
 export async function handleProcessTryOn(data) {
+    console.log('[DEBUG-BG-TRYON] ========== handleProcessTryOn START ==========');
+    console.log('[DEBUG-BG-TRYON] Timestamp:', new Date().toISOString());
+
+    // DEBUG: Log trạng thái storage hiện tại
+    try {
+        const storageState = await chrome.storage.local.get(['auth_token', 'refresh_token', 'expires_at', 'user', 'fitly-auth-token']);
+        const ttl = storageState.expires_at ? Math.floor((storageState.expires_at - Date.now()) / 1000) : 'N/A';
+        console.log('[DEBUG-BG-TRYON] 💾 Storage state:');
+        console.log('[DEBUG-BG-TRYON]   auth_token:', storageState.auth_token ? `exists (${storageState.auth_token.substring(0, 30)}...)` : 'NULL');
+        console.log('[DEBUG-BG-TRYON]   refresh_token:', storageState.refresh_token ? `exists (${storageState.refresh_token.substring(0, 20)}...)` : 'NULL');
+        console.log('[DEBUG-BG-TRYON]   expires_at:', storageState.expires_at, '| TTL:', ttl, 's');
+        console.log('[DEBUG-BG-TRYON]   user:', storageState.user?.id || 'NULL');
+        console.log('[DEBUG-BG-TRYON]   fitly-auth-token:', storageState['fitly-auth-token'] ? 'exists' : 'NULL');
+    } catch (storageErr) {
+        console.error('[DEBUG-BG-TRYON] ❌ Cannot read storage:', storageErr);
+    }
+
     const guestMode = await isGuestMode();
     const demoMode = await isDemoMode();
-
+    console.log('[DEBUG-BG-TRYON] guestMode:', guestMode, '| demoMode:', demoMode);
     if (demoMode || guestMode || data.use_mock) {
         await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1000));
 
@@ -132,23 +149,36 @@ export async function handleProcessTryOn(data) {
     try {
         // STEP 2: Force refresh token to get maximum TTL (~1 hour)
         // This prevents token from expiring during the 3-5 minute Edge Function processing
-        let accessToken = await forceRefreshToken();
+        console.log('[DEBUG-BG-TRYON] STEP 2: Calling forceRefreshToken()...');
+        let accessToken;
+        try {
+            accessToken = await forceRefreshToken();
+            console.log('[DEBUG-BG-TRYON] forceRefreshToken result:', accessToken ? `token exists (${accessToken.substring(0, 30)}...)` : 'NULL');
+        } catch (forceRefreshErr) {
+            console.error('[DEBUG-BG-TRYON] ❌ forceRefreshToken threw error:', forceRefreshErr);
+            console.error('[DEBUG-BG-TRYON] errorCode:', forceRefreshErr.errorCode);
+            accessToken = null;
+        }
 
         if (!accessToken) {
             // Fallback: try Supabase client session
+            console.log('[DEBUG-BG-TRYON] Token is null, trying Supabase client session fallback...');
             const { data: { session }, error } = await getSupabaseSession();
-
             if (session?.access_token) {
                 accessToken = session.access_token;
+                console.log('[DEBUG-BG-TRYON] ✅ Got token from Supabase client session');
                 await chrome.storage.local.set({
                     auth_token: session.access_token,
                     refresh_token: session.refresh_token,
                     expires_at: session.expires_at ? session.expires_at * 1000 : Date.now() + 3600000,
                 });
+            } else {
+                console.error('[DEBUG-BG-TRYON] ❌ Supabase client session also has no token. error:', error?.message);
             }
         }
 
         if (!accessToken) {
+            console.error('[DEBUG-BG-TRYON] ❌ NO TOKEN after all refresh attempts — returning error');
             log('[handleProcessTryOn] ❌ No token after all refresh attempts');
             return { success: false, error: 'Chưa đăng nhập. Vui lòng đăng nhập để sử dụng AI try-on.' };
         }
@@ -225,6 +255,9 @@ export async function handleProcessTryOn(data) {
         };
 
         // STEP 6: Gọi lần đầu
+        console.log('[DEBUG-BG-TRYON] STEP 6: Calling Edge Function (first attempt)...');
+        console.log('[DEBUG-BG-TRYON] Edge Function URL:', `${SUPABASE_URL}/functions/v1/process-tryon`);
+        const edgeCallStart = Date.now();
         let response;
         try {
             response = await callTryOnEdge(accessToken);
@@ -238,17 +271,33 @@ export async function handleProcessTryOn(data) {
             }
             throw fetchErr; // Re-throw network errors to outer catch
         }
+        const edgeCallTime = Date.now() - edgeCallStart;
+        console.log('[DEBUG-BG-TRYON] Edge Function responded in', edgeCallTime, 'ms, status:', response.status);
         log('[handleProcessTryOn] First call status:', response.status);
 
         // STEP 7: Nếu 401/403 → force refresh token và retry 1 lần
         if (!response.ok && (response.status === 401 || response.status === 403)) {
             const errBody = await response.clone().json().catch(() => ({}));
+            console.error('[DEBUG-BG-TRYON] ❌ Got', response.status, 'from Edge Function!');
+            console.error('[DEBUG-BG-TRYON] Error body:', JSON.stringify(errBody));
+            console.error('[DEBUG-BG-TRYON] Đang force refresh token để retry...');
             log('[handleProcessTryOn] ❌ Got', response.status, '| body:', JSON.stringify(errBody));
             log('[handleProcessTryOn] Force refreshing token for retry...');
-            const newAccessToken = await forceRefreshToken();
+            let retryRefreshErr = null;
+            let newAccessToken;
+            try {
+                newAccessToken = await forceRefreshToken();
+                console.log('[DEBUG-BG-TRYON] Force refresh for retry result:', newAccessToken ? 'GOT TOKEN' : 'NULL');
+            } catch (refreshErr) {
+                console.error('[DEBUG-BG-TRYON] ❌ forceRefreshToken threw on retry:', refreshErr);
+                retryRefreshErr = refreshErr;
+                newAccessToken = null;
+            }
 
             if (!newAccessToken) {
                 // Refresh thất bại → xóa hết token, yêu cầu đăng nhập lại
+                console.error('[DEBUG-BG-TRYON] 🔴 REFRESH FAILED on retry — clearing tokens, returning AUTH_EXPIRED');
+                console.error('[DEBUG-BG-TRYON] retryRefreshErr:', retryRefreshErr?.message || 'returned null');
                 await chrome.storage.local.remove(['auth_token', 'expires_at', 'refresh_token']);
                 return {
                     success: false,
@@ -277,6 +326,8 @@ export async function handleProcessTryOn(data) {
                 if (response.status === 401 || response.status === 403) {
                     await chrome.storage.local.remove(['auth_token', 'expires_at', 'refresh_token']);
                     const retryBody = await response.json().catch(() => ({}));
+                    console.error('[DEBUG-BG-TRYON] 🔴 RETRY also got', response.status, '— thiệt hại: clearing tokens');
+                    console.error('[DEBUG-BG-TRYON] Retry error body:', JSON.stringify(retryBody));
                     log('[handleProcessTryOn] Retry auth failed, body:', retryBody);
                     return {
                         success: false,

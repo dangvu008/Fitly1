@@ -598,62 +598,6 @@
                 </div>
             </section>
 
-            <!-- All Outfits Section (Select Looks — Full Screen) -->
-            <section id="all-outfits-section" class="section all-outfits-section hidden">
-                <!-- Header -->
-                <div class="ao-header">
-                    <div class="ao-header-top">
-                        <div class="ao-branding">
-                            <span class="material-symbols-outlined ao-brand-icon">checkroom</span>
-                            <span class="ao-brand-text">GEMINI STYLIST</span>
-                        </div>
-                        <div class="ao-header-actions">
-                            <button id="ao-search-btn" class="ao-header-btn" title="Search">
-                                <span class="material-symbols-outlined">search</span>
-                            </button>
-                            <button id="ao-filter-btn" class="ao-header-btn" title="Filter">
-                                <span class="material-symbols-outlined">tune</span>
-                            </button>
-                            <button id="ao-close-btn" class="ao-header-btn" title="Close">
-                                <span class="material-symbols-outlined">close</span>
-                            </button>
-                        </div>
-                    </div>
-                    <h2 class="ao-title" data-i18n="all_outfits.title">Select Looks</h2>
-
-                    <!-- Search Bar (hidden by default) -->
-                    <div id="ao-search-wrap" class="ao-search-wrap hidden">
-                        <span class="material-symbols-outlined ao-search-icon">search</span>
-                        <input type="text" id="ao-search-input" class="ao-search-input" placeholder="Search outfits..."
-                            data-i18n-placeholder="all_outfits.search_placeholder">
-                    </div>
-
-                    <!-- Tabs -->
-                    <div class="ao-tabs">
-                        <button class="ao-tab active" data-tab="all" data-i18n="all_outfits.tab_all">All</button>
-                        <button class="ao-tab" data-tab="favorites"
-                            data-i18n="all_outfits.tab_favorites">Favorites</button>
-                        <button class="ao-tab" data-tab="deleted" data-i18n="all_outfits.tab_deleted">Deleted</button>
-                    </div>
-                </div>
-
-                <!-- Scrollable Grid -->
-                <div class="ao-grid-scroll">
-                    <div id="all-outfits-grid" class="ao-grid">
-                        <!-- Cards injected by JS -->
-                    </div>
-                </div>
-
-                <!-- Sticky Bottom Bar -->
-                <div class="ao-bottom-bar">
-                    <button id="ao-compare-btn" class="ao-bottom-btn ao-btn-outline" disabled>
-                        <span class="material-symbols-outlined">compare</span> Compare
-                    </button>
-                    <button id="ao-lookbook-btn" class="ao-bottom-btn ao-btn-filled">
-                        <span class="material-symbols-outlined">auto_stories</span> Lookbook
-                    </button>
-                </div>
-            </section>
 
 
             <!-- Keyboard Shortcuts Hint -->
@@ -666,6 +610,62 @@
             </div>
 
         </main>
+
+        <!-- All Outfits Section (Select Looks — Full Screen Overlay, OUTSIDE main-content) -->
+        <section id="all-outfits-section" class="section all-outfits-section hidden">
+            <!-- Header -->
+            <div class="ao-header">
+                <div class="ao-header-top">
+                    <div class="ao-branding">
+                        <span class="material-symbols-outlined ao-brand-icon">checkroom</span>
+                        <span class="ao-brand-text">GEMINI STYLIST</span>
+                    </div>
+                    <div class="ao-header-actions">
+                        <button id="ao-search-btn" class="ao-header-btn" title="Search">
+                            <span class="material-symbols-outlined">search</span>
+                        </button>
+                        <button id="ao-filter-btn" class="ao-header-btn" title="Filter">
+                            <span class="material-symbols-outlined">tune</span>
+                        </button>
+                        <button id="ao-close-btn" class="ao-header-btn" title="Close">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                </div>
+                <h2 class="ao-title" data-i18n="all_outfits.title">Select Looks</h2>
+
+                <!-- Search Bar (hidden by default) -->
+                <div id="ao-search-wrap" class="ao-search-wrap hidden">
+                    <span class="material-symbols-outlined ao-search-icon">search</span>
+                    <input type="text" id="ao-search-input" class="ao-search-input" placeholder="Search outfits..."
+                        data-i18n-placeholder="all_outfits.search_placeholder">
+                </div>
+
+                <!-- Tabs -->
+                <div class="ao-tabs">
+                    <button class="ao-tab active" data-tab="all" data-i18n="all_outfits.tab_all">All</button>
+                    <button class="ao-tab" data-tab="favorites" data-i18n="all_outfits.tab_favorites">Favorites</button>
+                    <button class="ao-tab" data-tab="deleted" data-i18n="all_outfits.tab_deleted">Deleted</button>
+                </div>
+            </div>
+
+            <!-- Scrollable Grid -->
+            <div class="ao-grid-scroll">
+                <div id="all-outfits-grid" class="ao-grid">
+                    <!-- Cards injected by JS -->
+                </div>
+            </div>
+
+            <!-- Sticky Bottom Bar -->
+            <div class="ao-bottom-bar">
+                <button id="ao-compare-btn" class="ao-bottom-btn ao-btn-outline" disabled>
+                    <span class="material-symbols-outlined">compare</span> Compare
+                </button>
+                <button id="ao-lookbook-btn" class="ao-bottom-btn ao-btn-filled">
+                    <span class="material-symbols-outlined">auto_stories</span> Lookbook
+                </button>
+            </div>
+        </section>
 
         <!-- Wardrobe Category Modal (shown when adding item from context menu) -->
         <div id="wardrobe-category-modal" class="wardrobe-category-modal-overlay hidden">

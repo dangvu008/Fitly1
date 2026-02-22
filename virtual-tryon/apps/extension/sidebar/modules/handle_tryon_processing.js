@@ -68,6 +68,12 @@ async function validateTryOnResult(resultImageUrl) {
 }
 
 async function processTryOn(event) {
+    console.log('[DEBUG-TRYON] ========== BẮT ĐẦU PROCESS TRY-ON ==========');
+    console.log('[DEBUG-TRYON] Timestamp:', new Date().toISOString());
+    console.log('[DEBUG-TRYON] state.modelImage:', state.modelImage ? `exists (${state.modelImage.substring(0, 50)}...)` : 'NULL');
+    console.log('[DEBUG-TRYON] state.selectedItems:', state.selectedItems.length, 'items');
+    console.log('[DEBUG-TRYON] state.gemsBalance:', state.gemsBalance);
+    console.log('[DEBUG-TRYON] state.authenticated:', state.authenticated);
     if (!state.modelImage || state.selectedItems.length === 0) {
         showToast(t('select_model_and_item'), 'error');
         return;
@@ -99,6 +105,7 @@ async function processTryOn(event) {
     updateProgress(10);
 
     state.tryonProcessing = true;
+    console.log('[DEBUG-TRYON] Confirmed by user, starting processing...');
     try {
         // Tier 2: Deep quality validation before spending gems
         if (window.deepValidateBeforeTryOn) {
@@ -121,20 +128,40 @@ async function processTryOn(event) {
             image_type: item.imageType || 'flat-lay'
         }));
 
-        const response = await chrome.runtime.sendMessage({
-            type: 'PROCESS_TRYON',
-            data: {
-                person_image: state.modelImage,
-                clothing_images: clothingImagesPayload,
-                clothing_image: state.clothingImage,
-                source_url: state.clothingSourceUrl,
-                quality: 'standard',
-                use_mock: useMock
-            }
-        });
+        console.log('[DEBUG-TRYON] 📤 Sending PROCESS_TRYON message to background...');
+        console.log('[DEBUG-TRYON] clothingImagesPayload:', clothingImagesPayload.length, 'items');
+        const sendTimestamp = Date.now();
+        let response;
+        try {
+            response = await chrome.runtime.sendMessage({
+                type: 'PROCESS_TRYON',
+                data: {
+                    person_image: state.modelImage,
+                    clothing_images: clothingImagesPayload,
+                    clothing_image: state.clothingImage,
+                    source_url: state.clothingSourceUrl,
+                    quality: 'standard',
+                    use_mock: useMock
+                }
+            });
+        } catch (sendErr) {
+            console.error('[DEBUG-TRYON] ❌ chrome.runtime.sendMessage FAILED:', sendErr);
+            console.error('[DEBUG-TRYON] Error name:', sendErr.name, '| message:', sendErr.message);
+            console.error('[DEBUG-TRYON] This usually means Service Worker was killed mid-processing');
+            throw sendErr;
+        }
+        const responseTime = Date.now() - sendTimestamp;
+        console.log('[DEBUG-TRYON] 📥 Response received in', responseTime, 'ms');
+        console.log('[DEBUG-TRYON] response:', JSON.stringify(response, null, 2));
 
         clearInterval(progressInterval);
         updateProgress(100);
+
+        if (!response) {
+            console.error('[DEBUG-TRYON] ❌ Response is null/undefined — SW có thể đã bị kill');
+            showErrorOverlay(true, 'Không nhận được phản hồi từ background. Vui lòng thử lại.');
+            return;
+        }
 
         if (response.success) {
             updateProgress(95);
@@ -173,10 +200,14 @@ async function processTryOn(event) {
         } else {
             const errorMessage = response.error || t('error_occurred');
             const errorCode = response.errorCode;
+            console.error('[DEBUG-TRYON] ❌ Try-on FAILED');
+            console.error('[DEBUG-TRYON] errorCode:', errorCode);
+            console.error('[DEBUG-TRYON] errorMessage:', errorMessage);
+            console.error('[DEBUG-TRYON] Full response:', JSON.stringify(response));
 
             // Xử lý error dựa trên errorCode thay vì keyword matching
             // Chỉ logout khi errorCode === 'AUTH_EXPIRED' (token thực sự hết hạn và refresh fail)
-            
+
             if (errorCode === 'TIMEOUT') {
                 // Timeout — Edge Function mất quá lâu, KHÔNG logout
                 const timeoutMsg = 'Xử lý ảnh quá lâu. Vui lòng thử lại sau.';
@@ -195,9 +226,13 @@ async function processTryOn(event) {
 
             if (errorCode === 'AUTH_EXPIRED') {
                 // Auth expired — token hết hạn và refresh cũng fail → logout user
+                console.error('[DEBUG-TRYON] 🔴 AUTH_EXPIRED detected — sẽ trigger LOGOUT');
+                console.error('[DEBUG-TRYON] Lý do: Token hết hạn + refresh thất bại');
                 showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'error');
                 try {
+                    console.log('[DEBUG-TRYON] 📤 Sending LOGOUT message...');
                     const logoutResp = await chrome.runtime.sendMessage({ type: 'LOGOUT' });
+                    console.log('[DEBUG-TRYON] LOGOUT response:', JSON.stringify(logoutResp));
                     if (logoutResp?.success) {
                         state.authenticated = false;
                         state.user = null;
@@ -206,8 +241,8 @@ async function processTryOn(event) {
                         if (window.showAuthSection) showAuthSection();
                         updateUI();
                     }
-                } catch (_e) { 
-                    console.error('[Fitly] Logout failed:', _e);
+                } catch (_e) {
+                    console.error('[DEBUG-TRYON] ❌ Logout message failed:', _e);
                 }
                 return;
             }
@@ -218,11 +253,14 @@ async function processTryOn(event) {
                 state.gemsBalance = response.newBalance;
                 updateUI();
             }
-            
+
             showErrorOverlay(true, errorMessage);
         }
     } catch (error) {
-        console.error('Try-on error:', error);
+        console.error('[DEBUG-TRYON] ❌ OUTER CATCH — unexpected error:', error);
+        console.error('[DEBUG-TRYON] Error type:', error.constructor?.name);
+        console.error('[DEBUG-TRYON] Error message:', error.message);
+        console.error('[DEBUG-TRYON] Stack:', error.stack);
         showErrorOverlay(true, t('processing_error'));
     } finally {
         state.tryonProcessing = false;

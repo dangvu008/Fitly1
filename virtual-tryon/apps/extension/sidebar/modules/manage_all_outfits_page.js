@@ -24,6 +24,10 @@ let allOutfitsFavoriteIds = [];
 let allOutfitsSearchQuery = '';
 let allOutfitsSearchVisible = false;
 
+// Track visibility state before opening All Outfits
+let wasInlineResultVisible = false;
+let wasCreatedOutfitsVisible = false;
+
 // ==========================================
 // PERSISTENCE — Favorites
 // ==========================================
@@ -69,11 +73,17 @@ async function openAllOutfits() {
         if (window.loadHiddenOutfitIds) loadHiddenOutfitIds();
     }
 
-    // STEP 2: Hide main content, show all outfits section
+    // STEP 2: Save visibility state BEFORE hiding
+    const inlineResultEl = document.getElementById('inline-result-section');
+    const createdOutfitsEl = document.getElementById('created-outfits-list-section');
+    wasInlineResultVisible = inlineResultEl ? !inlineResultEl.classList.contains('hidden') : false;
+    wasCreatedOutfitsVisible = createdOutfitsEl ? !createdOutfitsEl.classList.contains('hidden') : false;
+
+    // STEP 3: Hide main content, show all outfits section
     const mainContent = document.getElementById('main-content');
     if (mainContent) mainContent.classList.add('hidden');
-    document.getElementById('inline-result-section')?.classList.add('hidden');
-    document.getElementById('created-outfits-list-section')?.classList.add('hidden');
+    if (inlineResultEl) inlineResultEl.classList.add('hidden');
+    if (createdOutfitsEl) createdOutfitsEl.classList.add('hidden');
     section.classList.remove('hidden');
 
     // STEP 3: Reset state
@@ -99,6 +109,14 @@ function closeAllOutfits() {
 
     const mainContent = document.getElementById('main-content');
     if (mainContent) mainContent.classList.remove('hidden');
+
+    // Restore previously visible sections
+    if (wasInlineResultVisible) {
+        document.getElementById('inline-result-section')?.classList.remove('hidden');
+    }
+    if (wasCreatedOutfitsVisible) {
+        document.getElementById('created-outfits-list-section')?.classList.remove('hidden');
+    }
 
     allOutfitsSelectedIds = [];
 }
